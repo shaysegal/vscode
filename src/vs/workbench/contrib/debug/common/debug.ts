@@ -32,6 +32,7 @@ export const VIEWLET_ID = 'workbench.view.debug';
 
 export const VARIABLES_VIEW_ID = 'workbench.debug.variablesView';
 export const WATCH_VIEW_ID = 'workbench.debug.watchExpressionsView';
+export const DESYNT_VIEW_ID = 'workbench.debug.deSyntView';
 export const CALLSTACK_VIEW_ID = 'workbench.debug.callStackView';
 export const LOADED_SCRIPTS_VIEW_ID = 'workbench.debug.loadedScriptsView';
 export const BREAKPOINTS_VIEW_ID = 'workbench.debug.breakPointsView';

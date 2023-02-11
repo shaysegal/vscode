@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as http from 'http';
 import * as url from 'url';
 import * as cookie from 'cookie';
-import * as crypto from 'crypto';
+//import * as crypto from 'crypto';
 import { isEqualOrParent } from 'vs/base/common/extpath';
 import { getMediaMime } from 'vs/base/common/mime';
 import { isLinux } from 'vs/base/common/platform';
@@ -339,23 +339,23 @@ export class WebClientServer {
 			return void res.end('Not found');
 		}
 
-		const cspDirectives = [
-			'default-src \'self\';',
-			'img-src \'self\' https: data: blob:;',
-			'media-src \'self\';',
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-fh3TwPMflhsEIpR8g1OYTIMVWhXTLcjQ9kh2tIpmv54=' http://${remoteAuthority};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
-			'child-src \'self\';',
-			`frame-src 'self' https://*.vscode-cdn.net data:;`,
-			'worker-src \'self\' data:;',
-			'style-src \'self\' \'unsafe-inline\';',
-			'connect-src \'self\' ws: wss: https:;',
-			'font-src \'self\' blob:;',
-			'manifest-src \'self\';'
-		].join(' ');
+		//const cspDirectives = [
+		//	'default-src \'self\';',
+		//	'img-src \'self\' https: data: blob:;',
+		//	'media-src \'self\';',
+		//	`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-fh3TwPMflhsEIpR8g1OYTIMVWhXTLcjQ9kh2tIpmv54=' http://${remoteAuthority};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
+		//	'child-src \'self\';',
+		//	`frame-src 'self' https://*.vscode-cdn.net data:;`,
+		//	'worker-src \'self\' data:;',
+		//	'style-src \'self\' \'unsafe-inline\';',
+		//	'connect-src \'self\' ws: wss: https:;',
+		//	'font-src \'self\' blob:;',
+		//	'manifest-src \'self\';'
+		//].join(' ');
 
 		const headers: http.OutgoingHttpHeaders = {
 			'Content-Type': 'text/html',
-			'Content-Security-Policy': cspDirectives
+			//'Content-Security-Policy': cspDirectives
 		};
 		if (this._connectionToken.type !== ServerConnectionTokenType.None) {
 			// At this point we know the client has a valid cookie
@@ -375,24 +375,24 @@ export class WebClientServer {
 		return void res.end(data);
 	}
 
-	private _getScriptCspHashes(content: string): string[] {
-		// Compute the CSP hashes for line scripts. Uses regex
-		// which means it isn't 100% good.
-		const regex = /<script>([\s\S]+?)<\/script>/img;
-		const result: string[] = [];
-		let match: RegExpExecArray | null;
-		while (match = regex.exec(content)) {
-			const hasher = crypto.createHash('sha256');
-			// This only works on Windows if we strip `\r` from `\r\n`.
-			const script = match[1].replace(/\r\n/g, '\n');
-			const hash = hasher
-				.update(Buffer.from(script))
-				.digest().toString('base64');
-
-			result.push(`'sha256-${hash}'`);
-		}
-		return result;
-	}
+	//private _getScriptCspHashes(content: string): string[] {
+	//	// Compute the CSP hashes for line scripts. Uses regex
+	//	// which means it isn't 100% good.
+	//	const regex = /<script>([\s\S]+?)<\/script>/img;
+	//	const result: string[] = [];
+	//	let match: RegExpExecArray | null;
+	//	while (match = regex.exec(content)) {
+	//		const hasher = crypto.createHash('sha256');
+	//		// This only works on Windows if we strip `\r` from `\r\n`.
+	//		const script = match[1].replace(/\r\n/g, '\n');
+	//		const hash = hasher
+	//			.update(Buffer.from(script))
+	//			.digest().toString('base64');
+	//
+	//		result.push(`'sha256-${hash}'`);
+	//	}
+	//	return result;
+	//}
 
 	/**
 	 * Handle HTTP requests for /callback
@@ -400,18 +400,18 @@ export class WebClientServer {
 	private async _handleCallback(res: http.ServerResponse): Promise<void> {
 		const filePath = FileAccess.asFileUri('vs/code/browser/workbench/callback.html').fsPath;
 		const data = (await fsp.readFile(filePath)).toString();
-		const cspDirectives = [
-			'default-src \'self\';',
-			'img-src \'self\' https: data: blob:;',
-			'media-src \'none\';',
-			`script-src 'self' ${this._getScriptCspHashes(data).join(' ')};`,
-			'style-src \'self\' \'unsafe-inline\';',
-			'font-src \'self\' blob:;'
-		].join(' ');
+		//const cspDirectives = [
+		//	'default-src \'self\';',
+		//	'img-src \'self\' https: data: blob:;',
+		//	'media-src \'none\';',
+		//	`script-src 'self' ${this._getScriptCspHashes(data).join(' ')};`,
+		//	'style-src \'self\' \'unsafe-inline\';',
+		//	'font-src \'self\' blob:;'
+		//].join(' ');
 
 		res.writeHead(200, {
 			'Content-Type': 'text/html',
-			'Content-Security-Policy': cspDirectives
+			//'Content-Security-Policy': cspDirectives
 		});
 		return void res.end(data);
 	}

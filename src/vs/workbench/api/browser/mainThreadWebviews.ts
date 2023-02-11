@@ -126,7 +126,7 @@ export class MainThreadWebviews extends Disposable implements extHostProtocol.Ma
 		<html>
 			<head>
 				<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none';">
+				<!--<meta http-equiv="Content-Security-Policy" content="default-src 'none';">-->
 			</head>
 			<body>${localize('errorMessage', "An error occurred while loading view: {0}", escape(viewType))}</body>
 		</html>`;

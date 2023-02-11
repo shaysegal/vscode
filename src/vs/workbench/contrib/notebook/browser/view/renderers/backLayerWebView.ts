@@ -284,7 +284,8 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 			this.workspaceTrustManagementService.isWorkspaceTrusted(),
 			this.nonce);
 
-		const enableCsp = this.configurationService.getValue('notebook.experimental.enableCsp');
+		let enableCsp = this.configurationService.getValue('notebook.experimental.enableCsp');
+		enableCsp = false;
 		const currentHighlight = this.getColor(editorFindMatch);
 		const findMatchHighlight = this.getColor(editorFindMatchHighlight);
 		return /* html */`
