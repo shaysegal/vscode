@@ -198,6 +198,13 @@ export class DebugService implements IDebugService {
 
 		this.initContextKeys(contextKeyService);
 	}
+	addDesyntWatchExpression(name?: string | undefined): void {
+		const we = this.model.addDesyntWatchExpression(name);
+		if (!name) {
+			this.viewModel.setSelectedExpression(we, false);
+		}
+		this.debugStorage.storeWatchExpressions(this.model.getWatchExpressions());
+	}
 
 	private initContextKeys(contextKeyService: IContextKeyService): void {
 		queueMicrotask(() => {

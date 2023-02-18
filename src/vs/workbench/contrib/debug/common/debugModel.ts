@@ -245,10 +245,11 @@ export class Expression extends ExpressionContainer implements IExpression {
 	static readonly DEFAULT_VALUE = nls.localize('notAvailable', "not available");
 
 	public available: boolean;
-
+	public inDesynt: boolean;
 	constructor(public name: string, id = generateUuid()) {
 		super(undefined, undefined, 0, id);
 		this.available = false;
+		this.inDesynt = false;
 		// name is not set if the expression is just being added
 		// in that case do not set default value to prevent flashing #14499
 		if (name) {
@@ -1664,6 +1665,15 @@ export class DebugModel implements IDebugModel {
 
 	addWatchExpression(name?: string): IExpression {
 		const we = new Expression(name || '');
+		this.watchExpressions.push(we);
+		this._onDidChangeWatchExpressions.fire(we);
+
+		return we;
+	}
+
+	addDesyntWatchExpression(name?: string): IExpression {
+		const we = new Expression(name || '');
+		we.inDesynt = true;
 		this.watchExpressions.push(we);
 		this._onDidChangeWatchExpressions.fire(we);
 

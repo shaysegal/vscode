@@ -112,6 +112,9 @@ export class WatchExpressionsView extends ViewPane {
 		this._register(this.tree.onContextMenu(e => this.onContextMenu(e)));
 		this._register(this.tree.onMouseDblClick(e => this.onMouseDblClick(e)));
 		this._register(this.debugService.getModel().onDidChangeWatchExpressions(async we => {
+			if ((we as Expression).inDesynt) {
+				return;
+			}
 			this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions().length > 0);
 			if (!this.isBodyVisible()) {
 				this.needsRefresh = true;

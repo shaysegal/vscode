@@ -52,6 +52,8 @@ export const CONTEXT_IN_BREAKPOINT_WIDGET = new RawContextKey<boolean>('inBreakp
 export const CONTEXT_BREAKPOINTS_FOCUSED = new RawContextKey<boolean>('breakpointsFocused', true, { type: 'boolean', description: nls.localize('breakpointsFocused', "True when the BREAKPOINTS view is focused, false otherwise.") });
 export const CONTEXT_WATCH_EXPRESSIONS_FOCUSED = new RawContextKey<boolean>('watchExpressionsFocused', true, { type: 'boolean', description: nls.localize('watchExpressionsFocused', "True when the WATCH view is focused, false otherwsie.") });
 export const CONTEXT_WATCH_EXPRESSIONS_EXIST = new RawContextKey<boolean>('watchExpressionsExist', false, { type: 'boolean', description: nls.localize('watchExpressionsExist', "True when at least one watch expression exists, false otherwise.") });
+export const CONTEXT_DESYNT_FOCUSED = new RawContextKey<boolean>('desyntFocused', true, { type: 'boolean', description: nls.localize('desyntFocused', "True when the desynt view is focused, false otherwsie.") });
+export const CONTEXT_DESYNT_EXIST = new RawContextKey<boolean>('desyntExist', false, { type: 'boolean', description: nls.localize('desyntExist', "True when at least one watch expression in desynt exists, false otherwise.") });
 export const CONTEXT_VARIABLES_FOCUSED = new RawContextKey<boolean>('variablesFocused', true, { type: 'boolean', description: nls.localize('variablesFocused', "True when the VARIABLES views is focused, false otherwsie") });
 export const CONTEXT_EXPRESSION_SELECTED = new RawContextKey<boolean>('expressionSelected', false, { type: 'boolean', description: nls.localize('expressionSelected', "True when an expression input box is open in either the WATCH or the VARIABLES view, false otherwise.") });
 export const CONTEXT_BREAKPOINT_INPUT_FOCUSED = new RawContextKey<boolean>('breakpointInputFocused', false, { type: 'boolean', description: nls.localize('breakpointInputFocused', "True when the input box has focus in the BREAKPOINTS view.") });
@@ -1087,6 +1089,12 @@ export interface IDebugService {
 	 * Adds a new watch expression and evaluates it against the debug adapter.
 	 */
 	addWatchExpression(name?: string): void;
+
+	/**
+	 * Adds a new watch expression to desynt panel and evaluates it against the debug adapter.
+	 */
+	addDesyntWatchExpression(name?: string): void;
+
 
 	/**
 	 * Renames a watch expression and evaluates it against the debug adapter.

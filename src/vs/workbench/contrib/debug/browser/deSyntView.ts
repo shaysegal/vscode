@@ -5,7 +5,7 @@
 
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { IDebugService, IExpression, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, WATCH_VIEW_ID, CONTEXT_WATCH_EXPRESSIONS_EXIST, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY } from 'vs/workbench/contrib/debug/common/debug';
+import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -79,7 +79,7 @@ export class DeSyntView extends ViewPane {
 		}, 50);
 
 		//this.editorService = editorService;
-		this.watchExpressionsExist = CONTEXT_WATCH_EXPRESSIONS_EXIST.bindTo(contextKeyService);
+		this.watchExpressionsExist = CONTEXT_DESYNT_EXIST.bindTo(contextKeyService);
 		this.variableReadonly = CONTEXT_VARIABLE_IS_READONLY.bindTo(contextKeyService);
 		this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions().length > 0);
 		this.watchItemType = CONTEXT_WATCH_ITEM_TYPE.bindTo(contextKeyService);
@@ -96,6 +96,8 @@ export class DeSyntView extends ViewPane {
 
 		const expressionsRenderer = this.instantiationService.createInstance(WatchExpressionsRenderer);
 		const linkeDetector = this.instantiationService.createInstance(LinkDetector);
+		const buttonLabel = localize('Synthesize', 'Synthesize');
+		const button = this._register(new Button(treeContainer, { title: buttonLabel, ...defaultButtonStyles }));
 		this.tree = <WorkbenchAsyncDataTree<IDebugService | IExpression, IExpression, FuzzyScore>>this.instantiationService.createInstance(WorkbenchAsyncDataTree, 'WatchExpressions', treeContainer, new WatchExpressionsDelegate(), [expressionsRenderer, this.instantiationService.createInstance(VariablesRenderer, linkeDetector)],
 			new WatchExpressionsDataSource(), {
 			accessibilityProvider: new WatchExpressionsAccessibilityProvider(),
@@ -116,11 +118,10 @@ export class DeSyntView extends ViewPane {
 			}
 		});
 		this.tree.setInput(this.debugService);
-		CONTEXT_WATCH_EXPRESSIONS_FOCUSED.bindTo(this.tree.contextKeyService);
+		CONTEXT_DESYNT_FOCUSED.bindTo(this.tree.contextKeyService);
 		//my code adding button of synthesis options
 
-		const buttonLabel = localize('Synthesize', 'Synthesize');
-		const button = this._register(new Button(this.element, { title: buttonLabel, ...defaultButtonStyles }));
+
 		button.label = buttonLabel;
 		this._register(button.onDidClick(async () => {
 			const session = await this.debugService.getViewModel().focusedSession;
@@ -138,6 +139,9 @@ export class DeSyntView extends ViewPane {
 		this._register(this.tree.onContextMenu(e => this.onContextMenu(e)));
 		this._register(this.tree.onMouseDblClick(e => this.onMouseDblClick(e)));
 		this._register(this.debugService.getModel().onDidChangeWatchExpressions(async we => {
+			if (!(we as Expression).inDesynt) {
+				return;
+			}
 			this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions().length > 0);
 			if (!this.isBodyVisible()) {
 				this.needsRefresh = true;
@@ -213,7 +217,6 @@ export class DeSyntView extends ViewPane {
 	collapseAll(): void {
 		this.tree.collapseAll();
 	}
-
 	private onMouseDblClick(e: ITreeMouseEvent<IExpression>): void {
 		if ((e.browserEvent.target as HTMLElement).className.indexOf('twistie') >= 0) {
 			// Ignore double click events on twistie
@@ -476,17 +479,17 @@ class WatchExpressionsDragAndDrop implements ITreeDragAndDrop<IExpression> {
 registerAction2(class Collapse extends ViewAction<DeSyntView> {
 	constructor() {
 		super({
-			id: 'watch.collapse',
-			viewId: WATCH_VIEW_ID,
+			id: 'desynt.collapse',
+			viewId: DESYNT_VIEW_ID,
 			title: localize('collapse', "Collapse All"),
 			f1: false,
 			icon: Codicon.collapseAll,
-			precondition: CONTEXT_WATCH_EXPRESSIONS_EXIST,
+			precondition: CONTEXT_DESYNT_EXIST,
 			menu: {
 				id: MenuId.ViewTitle,
 				order: 30,
 				group: 'navigation',
-				when: ContextKeyExpr.equals('view', WATCH_VIEW_ID)
+				when: ContextKeyExpr.equals('view', DESYNT_VIEW_ID)
 			}
 		});
 	}
@@ -496,7 +499,7 @@ registerAction2(class Collapse extends ViewAction<DeSyntView> {
 	}
 });
 
-export const ADD_WATCH_ID = 'workbench.debug.viewlet.action.addWatchExpression'; // Use old and long id for backwards compatibility
+export const ADD_WATCH_ID = 'workbench.debug.viewlet.action.addWatchExpressionDesynt'; // Use old and long id for backwards compatibility
 export const ADD_WATCH_LABEL = localize('addWatchExpression', "Add Expression");
 
 registerAction2(class AddWatchExpressionAction extends Action2 {
@@ -509,14 +512,14 @@ registerAction2(class AddWatchExpressionAction extends Action2 {
 			menu: {
 				id: MenuId.ViewTitle,
 				group: 'navigation',
-				when: ContextKeyExpr.equals('view', WATCH_VIEW_ID)
+				when: ContextKeyExpr.equals('view', DESYNT_VIEW_ID)
 			}
 		});
 	}
 
 	run(accessor: ServicesAccessor): void {
 		const debugService = accessor.get(IDebugService);
-		debugService.addWatchExpression();
+		debugService.addDesyntWatchExpression();
 	}
 });
 
@@ -529,12 +532,12 @@ registerAction2(class RemoveAllWatchExpressionsAction extends Action2 {
 			title: REMOVE_WATCH_EXPRESSIONS_LABEL,
 			f1: false,
 			icon: watchExpressionsRemoveAll,
-			precondition: CONTEXT_WATCH_EXPRESSIONS_EXIST,
+			precondition: CONTEXT_DESYNT_EXIST,
 			menu: {
 				id: MenuId.ViewTitle,
 				order: 20,
 				group: 'navigation',
-				when: ContextKeyExpr.equals('view', WATCH_VIEW_ID)
+				when: ContextKeyExpr.equals('view', DESYNT_VIEW_ID)
 			}
 		});
 	}
