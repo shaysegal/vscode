@@ -37,10 +37,8 @@ import { createAndFillInContextMenuActions } from 'vs/platform/actions/browser/m
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { defaultButtonStyles } from 'vs/platform/theme/browser/defaultStyles';
-import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
-import { ValidAnnotatedEditOperation } from 'vs/editor/common/model';
-import { Range } from 'vs/editor/common/core/range';
-//import { ExtHostDocumentsAndEditors } from 'vs/workbench/api/common/extHostDocumentsAndEditors';
+//import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
+
 
 const MAX_VALUE_RENDER_LENGTH_IN_VIEWLET = 1024;
 let ignoreViewUpdates = false;
@@ -55,10 +53,10 @@ export class DeSyntView extends ViewPane {
 	private watchItemType: IContextKey<string | undefined>;
 	private variableReadonly: IContextKey<boolean>;
 	private menu: IMenu;
-	private editorService: ICodeEditorService;
+	//private editorService: ICodeEditorService;
 	constructor(
 		options: IViewletViewOptions,
-		@ICodeEditorService editorService: ICodeEditorService,
+		//@ICodeEditorService editorService: ICodeEditorService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IDebugService private readonly debugService: IDebugService,
 		@IKeybindingService keybindingService: IKeybindingService,
@@ -80,7 +78,7 @@ export class DeSyntView extends ViewPane {
 			this.tree.updateChildren();
 		}, 50);
 
-		this.editorService = editorService;
+		//this.editorService = editorService;
 		this.watchExpressionsExist = CONTEXT_WATCH_EXPRESSIONS_EXIST.bindTo(contextKeyService);
 		this.variableReadonly = CONTEXT_VARIABLE_IS_READONLY.bindTo(contextKeyService);
 		this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions().length > 0);
@@ -266,30 +264,11 @@ export class DeSyntView extends ViewPane {
 
 		if (json.program) {
 			const programDetails = json.program;
-			const pattern = '??';
-			await this.updateCode(Number(programDetails.line), pattern, programDetails.synthesized_program).then(
-				async () => await this.updateDebugger(programDetails.line, programDetails.synthesized_program));
+			//const pattern = '??';
+			this.debugService.getViewModel().updateViews();
+			await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
 		}
 
-	}
-	private async updateCode(line: number, pattern: string, program: string) {
-		const codeEditor = this.editorService.getActiveCodeEditor();
-		if (codeEditor) {
-			const codeEditorModel = codeEditor.getModel();
-			if (codeEditorModel) {
-				const lines = codeEditorModel.getLinesContent();
-				console.log(lines);
-				const relevantLine = lines[line - 1];
-				const patternPosition = relevantLine.indexOf(pattern);
-				const range = new Range(line, patternPosition + 1, line, patternPosition + pattern.length + 1);
-				codeEditorModel.applyEdits([
-					new ValidAnnotatedEditOperation(null, range, program, false, false, false)
-				]);
-
-
-			}
-
-		}
 	}
 	private async updateDebugger(line: number, program: string) {
 		const session = await this.debugService.getViewModel().focusedSession;
@@ -297,11 +276,7 @@ export class DeSyntView extends ViewPane {
 		if (session && stackFrame) {
 			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program}'})`;
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
-			if (SyntDict) {
-				const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', ''));
-				const res = await this.sendToSynthesizer(SyntDictJson);
-				console.log(res);
-			}
+			console.log(SyntDict);
 		}
 	}
 }

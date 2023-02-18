@@ -116,7 +116,33 @@ function createInlineValueDecoration(lineNumber: number, contentText: string, co
 		},
 	];
 }
+function createInlineValueDecorationDesynt(lineNumber: number, contentText: string, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
+	// If decoratorText is too long, trim and add ellipses. This could happen for minified files with everything on a single line
+	if (contentText.length > MAX_INLINE_DECORATOR_LENGTH) {
+		contentText = contentText.substring(0, MAX_INLINE_DECORATOR_LENGTH) + '...';
+	}
 
+	return [
+		{
+			range: {
+				startLineNumber: lineNumber,
+				endLineNumber: lineNumber,
+				startColumn: column,
+				endColumn: column
+			},
+			options: {
+				description: 'debug-inline-value-decoration-desynt',
+				after: {
+					content: replaceWsWithNoBreakWs(' SUGGESTED SOLUTION: ' + contentText),
+					inlineClassName: 'debug-inline-value',
+					inlineClassNameAffectsLetterSpacing: true,
+					cursorStops: InjectedTextCursorStops.None
+				},
+				showIfCollapsed: true,
+			}
+		}
+	];
+}
 function replaceWsWithNoBreakWs(str: string): string {
 	return str.replace(/[ \t]/g, strings.noBreakWhitespace);
 }
@@ -746,6 +772,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 			const scopes = await stackFrame.getMostSpecificScopes(stackFrame.range);
 			// Get all top level variables in the scope chain
+			const SyntDict = await this.getDesyntInsight(stackFrame);
 			const decorationsPerScope = await Promise.all(scopes.map(async scope => {
 				const variables = await scope.getChildren();
 
@@ -760,11 +787,42 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			allDecorations = distinct(decorationsPerScope.reduce((previous, current) => previous.concat(current), []),
 				// Deduplicate decorations since same variable can appear in multiple scopes, leading to duplicated decorations #129770
 				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
+			if (SyntDict) {
+				this.addDesyntInsightToDecorations(SyntDict, allDecorations);
+			}
 		}
 
 		this.oldDecorations.set(allDecorations);
 	}
+	private addDesyntInsightToDecorations(SyntDict: DebugProtocol.EvaluateResponse, allDecorations: IModelDeltaDecoration[]): void {
+		const solutionKey = "solution";
+		const allDecorationsLineAndColumn = allDecorations.map(decoration => {
+			return { line: decoration.range.startLineNumber, column: decoration.range.startColumn, type: decoration.options.description };
+		}).filter(decoration => decoration.type === 'debug-inline-value-decoration');
 
+		allDecorationsLineAndColumn.forEach(decoration => {
+			if (decoration.line in SyntDict) {
+				if (solutionKey in (SyntDict as any)[decoration.line]) {
+					const desyntDecoration = createInlineValueDecorationDesynt(decoration.line, (SyntDict as any)[decoration.line][solutionKey]);
+					allDecorations.push(...desyntDecoration);
+				}
+			}
+		});
+
+		return;
+	}
+	private async getDesyntInsight(stackFrame: IStackFrame): Promise<DebugProtocol.EvaluateResponse | undefined> {
+		const session = await this.debugService.getViewModel().focusedSession;
+		const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict)';
+		if (session) {
+			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+			if (SyntDict) {
+				const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', ''));
+				return SyntDictJson;
+			}
+		}
+		return undefined;
+	}
 	dispose(): void {
 		if (this.hoverWidget) {
 			this.hoverWidget.dispose();
