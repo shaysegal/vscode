@@ -246,10 +246,10 @@ export class Expression extends ExpressionContainer implements IExpression {
 
 	public available: boolean;
 	public inDesynt: boolean;
-	constructor(public name: string, id = generateUuid()) {
+	constructor(public name: string, id = generateUuid(), inDesynt = false) {
 		super(undefined, undefined, 0, id);
 		this.available = false;
-		this.inDesynt = false;
+		this.inDesynt = inDesynt;
 		// name is not set if the expression is just being added
 		// in that case do not set default value to prevent flashing #14499
 		if (name) {
@@ -1659,7 +1659,14 @@ export class DebugModel implements IDebugModel {
 		this._onDidChangeBreakpoints.fire({ removed, sessionOnly: false });
 	}
 
-	getWatchExpressions(): Expression[] {
+	getWatchExpressions(...args: []): Expression[] {
+		if (args.length > 0) {
+			const first = args.at(0);
+			if (first) {
+				const inDesynt: boolean = (first as boolean);
+				return this.watchExpressions.filter(we => we.inDesynt === inDesynt);
+			}
+		}
 		return this.watchExpressions;
 	}
 

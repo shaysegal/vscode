@@ -80,8 +80,8 @@ export class DebugStorage {
 	loadWatchExpressions(): Expression[] {
 		let result: Expression[] | undefined;
 		try {
-			result = JSON.parse(this.storageService.get(DEBUG_WATCH_EXPRESSIONS_KEY, StorageScope.WORKSPACE, '[]')).map((watchStoredData: { name: string; id: string }) => {
-				return new Expression(watchStoredData.name, watchStoredData.id);
+			result = JSON.parse(this.storageService.get(DEBUG_WATCH_EXPRESSIONS_KEY, StorageScope.WORKSPACE, '[]')).map((watchStoredData: { name: string; id: string; inDesynt: boolean }) => {
+				return new Expression(watchStoredData.name, watchStoredData.id, watchStoredData.inDesynt);
 			});
 		} catch (e) { }
 
@@ -98,7 +98,7 @@ export class DebugStorage {
 
 	storeWatchExpressions(watchExpressions: (IExpression & IEvaluate)[]): void {
 		if (watchExpressions.length) {
-			this.storageService.store(DEBUG_WATCH_EXPRESSIONS_KEY, JSON.stringify(watchExpressions.map(we => ({ name: we.name, id: we.getId() }))), StorageScope.WORKSPACE, StorageTarget.USER);
+			this.storageService.store(DEBUG_WATCH_EXPRESSIONS_KEY, JSON.stringify(watchExpressions.map(we => ({ name: we.name, id: we.getId(), inDesynt: (we as Expression).inDesynt }))), StorageScope.WORKSPACE, StorageTarget.USER);
 		} else {
 			this.storageService.remove(DEBUG_WATCH_EXPRESSIONS_KEY, StorageScope.WORKSPACE);
 		}

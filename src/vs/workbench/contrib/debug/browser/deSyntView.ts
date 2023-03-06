@@ -81,7 +81,7 @@ export class DeSyntView extends ViewPane {
 		//this.editorService = editorService;
 		this.watchExpressionsExist = CONTEXT_DESYNT_EXIST.bindTo(contextKeyService);
 		this.variableReadonly = CONTEXT_VARIABLE_IS_READONLY.bindTo(contextKeyService);
-		this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions().length > 0);
+		this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions(true).length > 0);
 		this.watchItemType = CONTEXT_WATCH_ITEM_TYPE.bindTo(contextKeyService);
 
 	}
@@ -139,10 +139,10 @@ export class DeSyntView extends ViewPane {
 		this._register(this.tree.onContextMenu(e => this.onContextMenu(e)));
 		this._register(this.tree.onMouseDblClick(e => this.onMouseDblClick(e)));
 		this._register(this.debugService.getModel().onDidChangeWatchExpressions(async we => {
-			if (!(we as Expression).inDesynt) {
+			if (we && !(we as Expression).inDesynt) {
 				return;
 			}
-			this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions().length > 0);
+			this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions(true).length > 0);
 			if (!this.isBodyVisible()) {
 				this.needsRefresh = true;
 			} else {
@@ -181,6 +181,10 @@ export class DeSyntView extends ViewPane {
 		let horizontalScrolling: boolean | undefined;
 		this._register(this.debugService.getViewModel().onDidSelectExpression(e => {
 			const expression = e?.expression;
+			if (expression && !(expression as Expression).inDesynt) {
+				return;
+			}
+
 			if (expression instanceof Expression || (expression instanceof Variable && e?.settingWatch)) {
 				horizontalScrolling = this.tree.options.horizontalScrolling;
 				if (horizontalScrolling) {
@@ -226,18 +230,20 @@ export class DeSyntView extends ViewPane {
 		const element = e.element;
 		// double click on primitive value: open input box to be able to select and copy value.
 		const selectedExpression = this.debugService.getViewModel().getSelectedExpression();
-		if (element instanceof Expression && element !== selectedExpression?.expression) {
+		if (element instanceof Expression && element !== selectedExpression?.expression && element.inDesynt) {
 			this.debugService.getViewModel().setSelectedExpression(element, false);
 		} else if (!element) {
 			// Double click in watch panel triggers to add a new watch expression
-			this.debugService.addWatchExpression();
+			this.debugService.addDesyntWatchExpression();
 		}
 	}
 
 	private onContextMenu(e: ITreeContextMenuEvent<IExpression>): void {
 		const element = e.element;
 		const selection = this.tree.getSelection();
-
+		if (element instanceof Expression && !element.inDesynt) {
+			return;
+		}
 		this.watchItemType.set(element instanceof Expression ? 'expression' : element instanceof Variable ? 'variable' : undefined);
 		const actions: IAction[] = [];
 		const attributes = element instanceof Variable ? element.presentationHint?.attributes : undefined;
@@ -312,7 +318,7 @@ class WatchExpressionsDataSource implements IAsyncDataSource<IDebugService, IExp
 	getChildren(element: IDebugService | IExpression): Promise<Array<IExpression>> {
 		if (isDebugService(element)) {
 			const debugService = element as IDebugService;
-			const watchExpressions = debugService.getModel().getWatchExpressions();
+			const watchExpressions = debugService.getModel().getWatchExpressions(true);
 			const viewModel = debugService.getViewModel();
 			return Promise.all(watchExpressions.map(we => !!we.name && !useCachedEvaluation
 				? we.evaluate(viewModel.focusedSession!, viewModel.focusedStackFrame!, 'watch').then(() => we)
@@ -342,6 +348,9 @@ class WatchExpressionsRenderer extends AbstractExpressionsRenderer {
 	}
 
 	protected renderExpression(expression: IExpression, data: IExpressionTemplateData, highlights: IHighlight[]): void {
+		if (expression instanceof Expression && !expression.inDesynt) {
+			return;
+		}
 		const text = typeof expression.value === 'string' ? `${expression.name}:` : expression.name;
 		let title: string;
 		if (expression.type) {
@@ -470,7 +479,7 @@ class WatchExpressionsDragAndDrop implements ITreeDragAndDrop<IExpression> {
 		}
 
 		const draggedElement = (data as ElementsDragAndDropData<IExpression>).elements[0];
-		const watches = this.debugService.getModel().getWatchExpressions();
+		const watches = this.debugService.getModel().getWatchExpressions(true);
 		const position = targetElement instanceof Expression ? watches.indexOf(targetElement) : watches.length - 1;
 		this.debugService.moveWatchExpression(draggedElement.getId(), position);
 	}
@@ -523,12 +532,12 @@ registerAction2(class AddWatchExpressionAction extends Action2 {
 	}
 });
 
-export const REMOVE_WATCH_EXPRESSIONS_COMMAND_ID = 'workbench.debug.viewlet.action.removeAllWatchExpressions';
+export const REMOVE_DESYNT_EXPRESSIONS_COMMAND_ID = 'workbench.debug.viewlet.action.removeAllDesyntExpressions';
 export const REMOVE_WATCH_EXPRESSIONS_LABEL = localize('removeAllWatchExpressions', "Remove All Expressions");
 registerAction2(class RemoveAllWatchExpressionsAction extends Action2 {
 	constructor() {
 		super({
-			id: REMOVE_WATCH_EXPRESSIONS_COMMAND_ID, // Use old and long id for backwards compatibility
+			id: REMOVE_DESYNT_EXPRESSIONS_COMMAND_ID, // Use old and long id for backwards compatibility
 			title: REMOVE_WATCH_EXPRESSIONS_LABEL,
 			f1: false,
 			icon: watchExpressionsRemoveAll,
