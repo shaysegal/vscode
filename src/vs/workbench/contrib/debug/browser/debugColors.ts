@@ -81,6 +81,13 @@ export function registerColors() {
 		hcLight: '#388A34'
 	}, localize('debugIcon.restartForeground', "Debug toolbar icon for restart."));
 
+	const debugIconDesyntAcceptForeground = registerColor('debugIcon.DesyntAcceptForeground', {
+		dark: '#89D185',
+		light: '#388A34',
+		hcDark: '#89D185',
+		hcLight: '#388A34'
+	}, localize('debugIcon.DesyntAcceptForeground', "Debug toolbar icon for Desynt Accept."));
+
 	const debugIconStepOverForeground = registerColor('debugIcon.stepOverForeground', {
 		dark: '#75BEFF',
 		light: '#007ACC',
@@ -322,6 +329,12 @@ export function registerColors() {
 		if (debugIconRestartColor) {
 			collector.addRule(`.monaco-workbench ${ThemeIcon.asCSSSelector(icons.debugRestart)}, .monaco-workbench ${ThemeIcon.asCSSSelector(icons.debugRestartFrame)}, .monaco-workbench .part > .title > .title-actions .action-label${ThemeIcon.asCSSSelector(icons.debugRestart)}, .monaco-workbench .part > .title > .title-actions .action-label${ThemeIcon.asCSSSelector(icons.debugRestartFrame)} { color: ${debugIconRestartColor}; }`);
 		}
+		const debugIconDesyntAcceptColor = theme.getColor(debugIconDesyntAcceptForeground);
+		if (debugIconDesyntAcceptColor) {
+			collector.addRule(`.monaco-workbench ${ThemeIcon.asCSSSelector(icons.debugDesyntAccpet)}, .monaco-workbench ${ThemeIcon.asCSSSelector(icons.debugDesyntAccpet)}, .monaco-workbench .part > .title > .title-actions .action-label${ThemeIcon.asCSSSelector(icons.debugDesyntAccpet)}, .monaco-workbench .part > .title > .title-actions .action-label${ThemeIcon.asCSSSelector(icons.debugDesyntAccpet)} { color: ${debugIconDesyntAcceptColor}; }`);
+		}
+
+
 
 		const debugIconStepOverColor = theme.getColor(debugIconStepOverForeground);
 		if (debugIconStepOverColor) {

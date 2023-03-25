@@ -55,6 +55,7 @@ export const debugGripper = registerIcon('debug-gripper', Codicon.gripper, local
 export const debugRestartFrame = registerIcon('debug-restart-frame', Codicon.debugRestartFrame, localize('debugRestartFrame', 'Icon for the debug restart frame action.'));
 
 export const debugStop = registerIcon('debug-stop', Codicon.debugStop, localize('debugStop', 'Icon for the debug stop action.'));
+export const debugDesyntAccpet = registerIcon('debug-PassFilled', Codicon.passFilled, localize('debugPassFilled', 'hard accept dysent candidate.'));
 export const debugDisconnect = registerIcon('debug-disconnect', Codicon.debugDisconnect, localize('debugDisconnect', 'Icon for the debug disconnect action.'));
 export const debugRestart = registerIcon('debug-restart', Codicon.debugRestart, localize('debugRestart', 'Icon for the debug restart action.'));
 export const debugStepOver = registerIcon('debug-step-over', Codicon.debugStepOver, localize('debugStepOver', 'Icon for the debug step over action.'));
