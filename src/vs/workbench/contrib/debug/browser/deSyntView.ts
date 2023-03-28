@@ -5,7 +5,7 @@
 
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED } from 'vs/workbench/contrib/debug/common/debug';
+import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_DESYNT_CANDIDATE_EXIST } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -50,6 +50,7 @@ export class DeSyntView extends ViewPane {
 	private needsRefresh = false;
 	private tree!: WorkbenchAsyncDataTree<IDebugService | IExpression, IExpression, FuzzyScore>;
 	private watchExpressionsExist: IContextKey<boolean>;
+	private candidateExist: IContextKey<boolean>;
 	private watchItemType: IContextKey<string | undefined>;
 	private variableReadonly: IContextKey<boolean>;
 	private menu: IMenu;
@@ -80,6 +81,7 @@ export class DeSyntView extends ViewPane {
 
 		//this.editorService = editorService;
 		this.watchExpressionsExist = CONTEXT_DESYNT_EXIST.bindTo(contextKeyService);
+		this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
 		this.variableReadonly = CONTEXT_VARIABLE_IS_READONLY.bindTo(contextKeyService);
 		this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions(true).length > 0);
 		this.watchItemType = CONTEXT_WATCH_ITEM_TYPE.bindTo(contextKeyService);
@@ -276,6 +278,7 @@ export class DeSyntView extends ViewPane {
 			//const pattern = '??';
 			this.debugService.getViewModel().updateViews();
 			await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
+			this.candidateExist.set(true);
 		}
 
 	}
@@ -283,7 +286,7 @@ export class DeSyntView extends ViewPane {
 		const session = await this.debugService.getViewModel().focusedSession;
 		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
 		if (session && stackFrame) {
-			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program}'})`;
+			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}'})`;
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			console.log(SyntDict);
 		}

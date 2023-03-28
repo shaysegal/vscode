@@ -35,6 +35,9 @@ import { showLoadedScriptMenu } from 'vs/workbench/contrib/debug/common/loadedSc
 import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSessionPicker';
 import { TEXT_FILE_EDITOR_ID } from 'vs/workbench/contrib/files/common/files';
 import { ILocalizedString } from 'vs/platform/action/common/action';
+import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
+import { ValidAnnotatedEditOperation } from 'vs/editor/common/model';
+import { Range } from 'vs/editor/common/core/range';
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
 export const TOGGLE_INLINE_BREAKPOINT_ID = 'editor.debug.action.toggleInlineBreakpoint';
@@ -51,6 +54,7 @@ export const PAUSE_ID = 'workbench.action.debug.pause';
 export const DISCONNECT_ID = 'workbench.action.debug.disconnect';
 export const DISCONNECT_AND_SUSPEND_ID = 'workbench.action.debug.disconnectAndSuspend';
 export const STOP_ID = 'workbench.action.debug.stop';
+export const ACCEPT_DESYNT_ID = 'workbench.action.debug.DesyntAccept';
 export const RESTART_FRAME_ID = 'workbench.action.debug.restartFrame';
 export const CONTINUE_ID = 'workbench.action.debug.continue';
 export const FOCUS_REPL_ID = 'workbench.debug.action.focusRepl';
@@ -83,6 +87,7 @@ export const PAUSE_LABEL = { value: nls.localize('pauseDebug', "Pause"), origina
 export const DISCONNECT_LABEL = { value: nls.localize('disconnect', "Disconnect"), original: 'Disconnect' };
 export const DISCONNECT_AND_SUSPEND_LABEL = { value: nls.localize('disconnectSuspend', "Disconnect and Suspend"), original: 'Disconnect and Suspend' };
 export const STOP_LABEL = { value: nls.localize('stop', "Stop"), original: 'Stop' };
+export const ACCEPT_DESYNT_LABEL = { value: nls.localize('acceptDesynt', "accept Desynt"), original: 'accept Desynt' };
 export const CONTINUE_LABEL = { value: nls.localize('continueDebug', "Continue"), original: 'Continue' };
 export const FOCUS_SESSION_LABEL = { value: nls.localize('focusSession', "Focus Session"), original: 'Focus Session' };
 export const SELECT_AND_START_LABEL = { value: nls.localize('selectAndStartDebugging', "Select and Start Debugging"), original: 'Select and Start Debugging' };
@@ -467,6 +472,48 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			session.removeReplExpressions();
 			await debugService.restartSession(session);
 		}
+	}
+});
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: ACCEPT_DESYNT_ID,
+	weight: KeybindingWeight.WorkbenchContrib,
+	primary: KeyMod.Shift | KeyCode.F6,
+	when: CONTEXT_IN_DEBUG_MODE,
+	handler: async (accessor, _, context) => {
+		const debugService = accessor.get(IDebugService);
+		const codeEditorService = accessor.get(ICodeEditorService);
+		const codeEditor = codeEditorService.getActiveCodeEditor();
+		const stackFrame = debugService.getViewModel().focusedStackFrame;
+		const pattern = '??';
+		const session = debugService.getViewModel().focusedSession;
+		if (stackFrame && codeEditor) {
+			const codeEditorModel = codeEditor.getModel();
+			const scopes = await stackFrame.getMostSpecificScopes(stackFrame.range);
+			// Get all top level variables in the scope chain
+			if (codeEditorModel && scopes && session) {
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict)';
+				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+				if (SyntDict) {
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"'));
+					const sketchLineNumbers = Object.keys(SyntDictJson);
+					const lines = codeEditorModel.getLinesContent();
+					for (const sketchLine of sketchLineNumbers) {
+						const line = parseInt(sketchLine);
+						const program = SyntDictJson[sketchLine]['solution'];
+						const relevantLine = lines[line - 1];
+						const patternPosition = relevantLine.indexOf(pattern);
+						const range = new Range(line, patternPosition + 1, line, patternPosition + pattern.length + 1);
+						codeEditorModel.applyEdits([
+							new ValidAnnotatedEditOperation(null, range, program, false, false, false)
+						]);
+					}
+				}
+
+			}
+
+		}
+		await debugService.stopSession(session, false, false);
 	}
 });
 
