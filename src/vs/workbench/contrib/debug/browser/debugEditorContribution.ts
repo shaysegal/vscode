@@ -487,6 +487,13 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		}
 
 		if (target.type === MouseTargetType.CONTENT_TEXT) {
+			const targetLineContent = this.editor.getModel()!.getLineContent(target.position.lineNumber);
+			if (target.detail.mightBeForeignElement) {
+				console.log('im on decoration');
+				if (targetLineContent.includes('??') && (targetLineContent.indexOf('#') !== -1 ? targetLineContent.indexOf('??') < targetLineContent.indexOf('#') : true)) {
+					console.log('im on sketch line');
+				}
+			}
 			if (target.position && !Position.equals(target.position, this.hoverPosition)) {
 				this.hoverPosition = target.position;
 				this.hideHoverScheduler.cancel();
@@ -817,7 +824,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		if (session) {
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			if (SyntDict) {
-				const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', ''));
+				const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"'));
 				return SyntDictJson;
 			}
 		}

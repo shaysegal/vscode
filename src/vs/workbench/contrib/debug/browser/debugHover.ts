@@ -26,7 +26,7 @@ import * as nls from 'vs/nls';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { WorkbenchAsyncDataTree } from 'vs/platform/list/browser/listService';
 import { ILogService } from 'vs/platform/log/common/log';
-import { asCssVariable, editorHoverBackground, editorHoverBorder, editorHoverForeground } from 'vs/platform/theme/common/colorRegistry';
+import { asCssVariable, editorHoverBackground, editorHoverBorder, editorHoverForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 import { renderExpressionValue } from 'vs/workbench/contrib/debug/browser/baseDebugView';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { VariablesRenderer } from 'vs/workbench/contrib/debug/browser/variablesView';
@@ -84,7 +84,8 @@ export class DebugHoverWidget implements IContentWidget {
 	private toDispose: lifecycle.IDisposable[];
 	private scrollbar!: DomScrollableElement;
 	private debugHoverComputer: DebugHoverComputer;
-
+	private normalContent: string = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover ', isMacintosh ? 'Option' : 'Alt');
+	private sketchContent: string = nls.localize({ key: 'quickTip2', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'click to change acceptamce option ', isMacintosh ? 'Option' : 'Alt');
 	constructor(
 		private editor: ICodeEditor,
 		@IDebugService private readonly debugService: IDebugService,
@@ -105,13 +106,31 @@ export class DebugHoverWidget implements IContentWidget {
 		this.treeContainer = dom.append(this.complexValueContainer, $('.debug-hover-tree'));
 		this.treeContainer.setAttribute('role', 'tree');
 		const tip = dom.append(this.complexValueContainer, $('.tip'));
-		tip.textContent = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover', isMacintosh ? 'Option' : 'Alt');
+		tip.textContent = this.normalContent;
+		const disableEnableLink = dom.append(tip, $('a'));
+		disableEnableLink.setAttribute('target', '_blank');
+		disableEnableLink.setAttribute('href', 'disableEnableLink');
+		disableEnableLink.textContent = nls.localize("enable", "enable");
+		disableEnableLink.tabIndex = 0;
+		disableEnableLink.style.color = asCssVariable(textLinkForeground);
+
+		this.toDispose.push(dom.addStandardDisposableListener(disableEnableLink, 'click', (e: IKeyboardEvent) => {
+			if (e.target.textContent === 'enable') {
+				disableEnableLink.textContent = nls.localize("disable", "disable");
+			} else {
+				disableEnableLink.textContent = nls.localize("enable", "enable");
+			}
+		}));
+
+
+
+		//tip.textContent = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover', isMacintosh ? 'Option' : 'Alt');
 		const dataSource = new DebugHoverDataSource();
 		const linkeDetector = this.instantiationService.createInstance(LinkDetector);
 		this.tree = <WorkbenchAsyncDataTree<IExpression, IExpression, any>>this.instantiationService.createInstance(WorkbenchAsyncDataTree, 'DebugHover', this.treeContainer, new DebugHoverDelegate(), [this.instantiationService.createInstance(VariablesRenderer, linkeDetector)],
 			dataSource, {
 			accessibilityProvider: new DebugHoverAccessibilityProvider(),
-			mouseSupport: false,
+			mouseSupport: true,
 			horizontalScrolling: true,
 			useShadows: false,
 			keyboardNavigationLabelProvider: { getKeyboardNavigationLabel: (e: IExpression) => e.name },
@@ -119,6 +138,23 @@ export class DebugHoverWidget implements IContentWidget {
 				listBackground: editorHoverBackground
 			}
 		});
+		this.toDispose.push(this.tree.onMouseDblClick((e) => {
+			const session = this.debugService.getViewModel().focusedSession;
+			if (session && e.element instanceof Variable && session.capabilities.supportsSetVariable && !e.element.presentationHint?.attributes?.includes('readOnly') && !e.element.presentationHint?.lazy) {
+				this.debugService.getViewModel().setSelectedExpression(e.element, false);
+			}
+		}));
+		this.toDispose.push(this.debugService.getViewModel().onDidSelectExpression(e => {
+			const variable = e?.expression;
+			if (variable instanceof Variable && !e?.settingWatch) {
+				const horizontalScrolling = this.tree.options.horizontalScrolling;
+				if (horizontalScrolling) {
+					this.tree.updateOptions({ horizontalScrolling: false });
+				}
+				this.tree.rerender(variable);
+			}
+		}));
+
 
 		this.valueContainer = $('.value');
 		this.valueContainer.tabIndex = 0;
@@ -221,7 +257,13 @@ export class DebugHoverWidget implements IContentWidget {
 		if (!this.domNode) {
 			this.create();
 		}
-
+		if ((expression as Expression).inDesynt) {
+			this.domNode.querySelector('.tip')!.firstChild!.textContent = this.sketchContent;//text
+			(this.domNode.querySelector('.tip')!.lastChild! as HTMLElement).hidden = false;//href
+		} else {
+			this.domNode.querySelector('.tip')!.firstChild!.textContent = this.normalContent;
+			(this.domNode.querySelector('.tip')!.lastChild! as HTMLElement).hidden = true;//href
+		}
 		this.showAtPosition = position;
 		this._isVisible = true;
 
@@ -381,9 +423,14 @@ class DebugHoverComputer {
 			this.logService.error('No expression to evaluate');
 			return;
 		}
-
+		let isDesynt = false;
+		if (this._currentExpression === '??') {
+			this._currentExpression = `synt_dict[${this._currentRange!.startLineNumber}]`;
+			isDesynt = true;
+		}
 		if (session.capabilities.supportsEvaluateForHovers) {
 			const expression = new Expression(this._currentExpression);
+			expression.inDesynt = isDesynt;
 			await expression.evaluate(session, this.debugService.getViewModel().focusedStackFrame, 'hover');
 			return expression;
 		} else {
