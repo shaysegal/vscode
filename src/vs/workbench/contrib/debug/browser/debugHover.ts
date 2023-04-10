@@ -16,7 +16,7 @@ import { KeyCode } from 'vs/base/common/keyCodes';
 import * as lifecycle from 'vs/base/common/lifecycle';
 import { isMacintosh } from 'vs/base/common/platform';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
-import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition } from 'vs/editor/browser/editorBrowser';
+import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition, IMouseTarget, IMouseTargetContentText } from 'vs/editor/browser/editorBrowser';
 import { ConfigurationChangedEvent, EditorOption } from 'vs/editor/common/config/editorOptions';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
@@ -86,6 +86,7 @@ export class DebugHoverWidget implements IContentWidget {
 	private debugHoverComputer: DebugHoverComputer;
 	private normalContent: string = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover ', isMacintosh ? 'Option' : 'Alt');
 	private sketchContent: string = nls.localize({ key: 'quickTip2', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'click to change acceptamce option ', isMacintosh ? 'Option' : 'Alt');
+	private mouseTarget: IMouseTarget | undefined;
 	constructor(
 		private editor: ICodeEditor,
 		@IDebugService private readonly debugService: IDebugService,
@@ -139,10 +140,16 @@ export class DebugHoverWidget implements IContentWidget {
 			}
 		});
 		this.toDispose.push(this.tree.onMouseDblClick((e) => {
-			const session = this.debugService.getViewModel().focusedSession;
-			if (session && e.element instanceof Variable && session.capabilities.supportsSetVariable && !e.element.presentationHint?.attributes?.includes('readOnly') && !e.element.presentationHint?.lazy) {
-				this.debugService.getViewModel().setSelectedExpression(e.element, false);
+			if (e.element && e.element.name === '??') {
+				const session = this.debugService.getViewModel().focusedSession;
+				if (session && e.element instanceof Variable && session.capabilities.supportsSetVariable && !e.element.presentationHint?.attributes?.includes('readOnly') && !e.element.presentationHint?.lazy) {
+					this.debugService.getViewModel().setSelectedExpression(e.element, false);
+				}
 			}
+		}
+		));
+		this.toDispose.push(this.editor.onMouseMove((e) => {
+			this.mouseTarget = e.target;
 		}));
 		this.toDispose.push(this.debugService.getViewModel().onDidSelectExpression(e => {
 			const variable = e?.expression;
@@ -288,7 +295,11 @@ export class DebugHoverWidget implements IContentWidget {
 		this.valueContainer.hidden = true;
 
 		await this.tree.setInput(expression);
-		this.complexValueTitle.textContent = expression.value;
+		try {
+			this.complexValueTitle.textContent = (expression as Expression).inDesynt && !((this.mouseTarget as IMouseTargetContentText).detail?.mightBeForeignElement) ? '??' : expression.value;
+		} catch {
+			this.complexValueTitle.textContent = expression.value;
+		}
 		this.complexValueTitle.title = expression.value;
 		this.layoutTreeAndContainer(true);
 		this.tree.scrollTop = 0;
