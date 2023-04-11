@@ -36,7 +36,7 @@ import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSe
 import { TEXT_FILE_EDITOR_ID } from 'vs/workbench/contrib/files/common/files';
 import { ILocalizedString } from 'vs/platform/action/common/action';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
-import { ValidAnnotatedEditOperation } from 'vs/editor/common/model';
+import { ITextModel, ValidAnnotatedEditOperation } from 'vs/editor/common/model';
 import { Range } from 'vs/editor/common/core/range';
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
@@ -459,7 +459,9 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		} else {
 			session = debugService.getViewModel().focusedSession;
 		}
-
+		const editorService = accessor.get(ICodeEditorService);
+		const codeEditorModel = editorService.getActiveCodeEditor()!.getModel();
+		await addSketchBreakpoints(codeEditorModel, debugService);
 		if (!session) {
 			const { launch, name } = debugService.getConfigurationManager().selectedConfiguration;
 			await debugService.startDebugging(launch, name, { noDebug: false, startedByUser: true });
@@ -785,20 +787,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const config = await getConfig();
 		const configOrName = config ? Object.assign(deepClone(config), debugStartOptions?.config) : name;
 		const codeEditorModel = editorService.getActiveCodeEditor()!.getModel();
-		if (codeEditorModel) {
-			const activeFileUri = codeEditorModel.uri;
-			const lines = codeEditorModel.getLinesContent();
-			for (let i = 0; i < lines.length; i++) {
-				if (lines[i].includes("??")) {
-					if (lines[i].includes("#") && lines[i].indexOf("#") < lines[i].indexOf("??")) {
-						continue;
-					}
-					await debugService.addBreakpoints(activeFileUri, [{ lineNumber: i + 1 }]);
-				}
-			}
-
-
-		}
+		await addSketchBreakpoints(codeEditorModel, debugService);
 		await debugService.startDebugging(launch, configOrName, { noDebug: debugStartOptions?.noDebug, startedByUser: true }, false);
 	}
 });
@@ -1084,3 +1073,18 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		await paneCompositeService.openPaneComposite(VIEWLET_ID, ViewContainerLocation.Sidebar, true);
 	}
 });
+async function addSketchBreakpoints(codeEditorModel: ITextModel | null, debugService: IDebugService) {
+	if (codeEditorModel) {
+		const activeFileUri = codeEditorModel.uri;
+		const lines = codeEditorModel.getLinesContent();
+		for (let i = 0; i < lines.length; i++) {
+			if (lines[i].includes("??")) {
+				if (lines[i].includes("#") && lines[i].indexOf("#") < lines[i].indexOf("??")) {
+					continue;
+				}
+				await debugService.addBreakpoints(activeFileUri, [{ lineNumber: i + 1 }]);
+			}
+		}
+	}
+}
+

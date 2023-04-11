@@ -111,14 +111,17 @@ export class DebugHoverWidget implements IContentWidget {
 		const disableEnableLink = dom.append(tip, $('a'));
 		disableEnableLink.setAttribute('target', '_blank');
 		disableEnableLink.setAttribute('href', 'disableEnableLink');
-		disableEnableLink.textContent = nls.localize("enable", "enable");
+		disableEnableLink.textContent = nls.localize("disable", "disable");
 		disableEnableLink.tabIndex = 0;
 		disableEnableLink.style.color = asCssVariable(textLinkForeground);
 
 		this.toDispose.push(dom.addStandardDisposableListener(disableEnableLink, 'click', (e: IKeyboardEvent) => {
+			const bp = this.debugService.getModel().getBreakpoints({ lineNumber: this.showAtPosition?.lineNumber });
 			if (e.target.textContent === 'enable') {
+				this.debugService.enableOrDisableBreakpoints(true, bp[0]);
 				disableEnableLink.textContent = nls.localize("disable", "disable");
 			} else {
+				this.debugService.enableOrDisableBreakpoints(false, bp[0]);
 				disableEnableLink.textContent = nls.localize("enable", "enable");
 			}
 		}));
@@ -296,7 +299,24 @@ export class DebugHoverWidget implements IContentWidget {
 
 		await this.tree.setInput(expression);
 		try {
-			this.complexValueTitle.textContent = (expression as Expression).inDesynt && !((this.mouseTarget as IMouseTargetContentText).detail?.mightBeForeignElement) ? '??' : expression.value;
+			if ((expression as Expression).inDesynt) {
+				const hasSolutionExpression = new Expression(`'solution' in ${expression.name}`);
+				await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
+				let title = '??';
+				if (hasSolutionExpression.value === 'True') {
+					const solutionExpression = new Expression(`${expression.name}['solution']`);
+					await solutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
+					title = solutionExpression.value;
+				}
+				if ((this.mouseTarget as IMouseTargetContentText).detail?.mightBeForeignElement) {//on decoration
+					this.complexValueTitle.textContent = title;//expression.value;
+				} else {
+					this.complexValueTitle.textContent = title;//'??';
+				}
+			} else {
+				this.complexValueTitle.textContent = expression.value;
+			}
+
 		} catch {
 			this.complexValueTitle.textContent = expression.value;
 		}
