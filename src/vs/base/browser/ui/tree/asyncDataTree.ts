@@ -727,7 +727,13 @@ export class AsyncDataTree<TInput, T, TFilterData = void> implements IDisposable
 	}
 
 	// Implementation
-
+	containDataNode(element: TInput | T): boolean {
+		const node: IAsyncDataTreeNode<TInput, T> | undefined = this.nodes.get((element === this.root.element ? null : element) as T);
+		if (!node) {
+			return false;
+		}
+		return true;
+	}
 	private getDataNode(element: TInput | T): IAsyncDataTreeNode<TInput, T> {
 		const node: IAsyncDataTreeNode<TInput, T> | undefined = this.nodes.get((element === this.root.element ? null : element) as T);
 

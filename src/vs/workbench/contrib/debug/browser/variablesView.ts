@@ -8,7 +8,7 @@ import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
 import { HighlightedLabel, IHighlight } from 'vs/base/browser/ui/highlightedlabel/highlightedLabel';
 import { IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
 import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
-import { IAsyncDataTreeViewState } from 'vs/base/browser/ui/tree/asyncDataTree';
+import { AsyncDataTree, IAsyncDataTreeViewState } from 'vs/base/browser/ui/tree/asyncDataTree';
 import { IAsyncDataSource, ITreeContextMenuEvent, ITreeMouseEvent, ITreeNode, ITreeRenderer } from 'vs/base/browser/ui/tree/tree';
 import { IAction } from 'vs/base/common/actions';
 import { coalesce } from 'vs/base/common/arrays';
@@ -166,8 +166,9 @@ export class VariablesView extends ViewPane {
 				if (horizontalScrolling) {
 					this.tree.updateOptions({ horizontalScrolling: false });
 				}
-
-				this.tree.rerender(variable);
+				if (this.tree as AsyncDataTree<IStackFrame | null, IExpression | IScope, FuzzyScore> && this.tree.containDataNode(variable)) {
+					this.tree.rerender(variable);
+				}
 			} else if (!e && horizontalScrolling !== undefined) {
 				this.tree.updateOptions({ horizontalScrolling: horizontalScrolling });
 				horizontalScrolling = undefined;

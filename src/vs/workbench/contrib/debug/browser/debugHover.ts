@@ -27,7 +27,7 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { WorkbenchAsyncDataTree } from 'vs/platform/list/browser/listService';
 import { ILogService } from 'vs/platform/log/common/log';
 import { asCssVariable, editorHoverBackground, editorHoverBorder, editorHoverForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
-import { renderExpressionValue } from 'vs/workbench/contrib/debug/browser/baseDebugView';
+import { IInputBoxOptions, renderExpressionValue } from 'vs/workbench/contrib/debug/browser/baseDebugView';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { VariablesRenderer } from 'vs/workbench/contrib/debug/browser/variablesView';
 import { IDebugService, IDebugSession, IExpression, IExpressionContainer, IStackFrame } from 'vs/workbench/contrib/debug/common/debug';
@@ -98,6 +98,9 @@ export class DebugHoverWidget implements IContentWidget {
 		this.showAtPosition = null;
 		this.positionPreference = [ContentWidgetPositionPreference.ABOVE, ContentWidgetPositionPreference.BELOW];
 		this.debugHoverComputer = this.instantiationService.createInstance(DebugHoverComputer, this.editor);
+		this.toDispose.push(this.editor.onMouseMove((e) => {
+			this.mouseTarget = e.target;
+		}));
 	}
 
 	private create(): void {
@@ -131,7 +134,7 @@ export class DebugHoverWidget implements IContentWidget {
 		//tip.textContent = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover', isMacintosh ? 'Option' : 'Alt');
 		const dataSource = new DebugHoverDataSource();
 		const linkeDetector = this.instantiationService.createInstance(LinkDetector);
-		this.tree = <WorkbenchAsyncDataTree<IExpression, IExpression, any>>this.instantiationService.createInstance(WorkbenchAsyncDataTree, 'DebugHover', this.treeContainer, new DebugHoverDelegate(), [this.instantiationService.createInstance(VariablesRenderer, linkeDetector)],
+		this.tree = <WorkbenchAsyncDataTree<IExpression, IExpression, any>>this.instantiationService.createInstance(WorkbenchAsyncDataTree, 'DebugHover', this.treeContainer, new DebugHoverDelegate(), [this.instantiationService.createInstance(HoverVariablesRenderer, linkeDetector)],
 			dataSource, {
 			accessibilityProvider: new DebugHoverAccessibilityProvider(),
 			mouseSupport: true,
@@ -143,7 +146,7 @@ export class DebugHoverWidget implements IContentWidget {
 			}
 		});
 		this.toDispose.push(this.tree.onMouseDblClick((e) => {
-			if (e.element && e.element.name === '??') {
+			if (e.element && e.element.name === 'sketchValue') {
 				const session = this.debugService.getViewModel().focusedSession;
 				if (session && e.element instanceof Variable && session.capabilities.supportsSetVariable && !e.element.presentationHint?.attributes?.includes('readOnly') && !e.element.presentationHint?.lazy) {
 					this.debugService.getViewModel().setSelectedExpression(e.element, false);
@@ -151,9 +154,7 @@ export class DebugHoverWidget implements IContentWidget {
 			}
 		}
 		));
-		this.toDispose.push(this.editor.onMouseMove((e) => {
-			this.mouseTarget = e.target;
-		}));
+
 		this.toDispose.push(this.debugService.getViewModel().onDidSelectExpression(e => {
 			const variable = e?.expression;
 			if (variable instanceof Variable && !e?.settingWatch) {
@@ -163,6 +164,9 @@ export class DebugHoverWidget implements IContentWidget {
 				}
 				this.tree.rerender(variable);
 			}
+		}));
+		this.toDispose.push(this.debugService.getViewModel().onWillUpdateViews(() => {
+			this.tree.updateChildren();
 		}));
 
 
@@ -296,25 +300,33 @@ export class DebugHoverWidget implements IContentWidget {
 		}
 
 		this.valueContainer.hidden = true;
-
-		await this.tree.setInput(expression);
 		try {
 			if ((expression as Expression).inDesynt) {
+				let title = '??';
+				let bodyExperssion = expression as Expression;
 				const hasSolutionExpression = new Expression(`'solution' in ${expression.name}`);
 				await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
-				let title = '??';
 				if (hasSolutionExpression.value === 'True') {
 					const solutionExpression = new Expression(`${expression.name}['solution']`);
 					await solutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
 					title = solutionExpression.value;
+				} else {
+					//bodyExperssion = new Expression(`sketchValueContainer`);
+					await bodyExperssion.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
 				}
+
 				if ((this.mouseTarget as IMouseTargetContentText).detail?.mightBeForeignElement) {//on decoration
+					bodyExperssion = new Expression(`synt_dict[${this.mouseTarget?.range?.startLineNumber}]`);
+					await bodyExperssion.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
 					this.complexValueTitle.textContent = title;//expression.value;
+					await this.tree.setInput(bodyExperssion);
 				} else {
 					this.complexValueTitle.textContent = title;//'??';
+					await this.tree.setInput(bodyExperssion);
 				}
 			} else {
 				this.complexValueTitle.textContent = expression.value;
+				await this.tree.setInput(expression);
 			}
 
 		} catch {
@@ -448,7 +460,15 @@ class DebugHoverComputer {
 		this._currentRange = Range.lift(range);
 		return { rangeChanged, range: this._currentRange };
 	}
-
+	private async createExpressionStringForSketch(lineNumber: number): Promise<string> {
+		const experssion = `synt_dict[${lineNumber}]`;
+		const hasSolutionExpression = new Expression(`'solution' in ${experssion}`);
+		await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
+		if (hasSolutionExpression.value === 'True') {
+			return experssion;
+		}
+		return `sketchValueContainer`;
+	}
 	async evaluate(session: IDebugSession): Promise<IExpression | undefined> {
 		if (!this._currentExpression) {
 			this.logService.error('No expression to evaluate');
@@ -456,7 +476,7 @@ class DebugHoverComputer {
 		}
 		let isDesynt = false;
 		if (this._currentExpression === '??') {
-			this._currentExpression = `synt_dict[${this._currentRange!.startLineNumber}]`;
+			this._currentExpression = await this.createExpressionStringForSketch(this._currentRange!.startLineNumber);//`synt_dict[${this._currentRange!.startLineNumber}]`;
 			isDesynt = true;
 		}
 		if (session.capabilities.supportsEvaluateForHovers) {
@@ -474,5 +494,19 @@ class DebugHoverComputer {
 		}
 
 		return undefined;
+	}
+}
+export class HoverVariablesRenderer extends VariablesRenderer {
+	protected override  getInputBoxOptions(expression: IExpression): IInputBoxOptions {
+		//const variable = <Variable>expression;
+		//const variableParent = <Expression>variable.parent;
+		const inputBoxOptions = super.getInputBoxOptions(expression);
+		const oldOnFinish = inputBoxOptions.onFinish;
+		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
+			oldOnFinish(value, success);
+		};
+
+		return inputBoxOptions;
+
 	}
 }
