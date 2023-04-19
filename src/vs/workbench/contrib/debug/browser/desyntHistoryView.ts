@@ -40,7 +40,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IPathService } from 'vs/workbench/services/path/common/pathService';
 import { TreeFindMode } from 'vs/base/browser/ui/tree/abstractTree';
-//import { IMenu, IMenuService, MenuId } from 'vs/platform/actions/common/actions';
+import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 
 const NEW_STYLE_COMPRESS = true;
 
@@ -165,11 +165,14 @@ class BaseTreeItem {
 		if (child) {
 			return child.getChildren();
 		}*/
+		const keys = [...this._children.keys()].sort((a, b) => parseInt(b) - parseInt(a));
 		const array: BaseTreeItem[] = [];
-		for (const child of this._children.values()) {
-			array.push(child);
+		//for (const child of this._children.values()) {
+		for (const k of keys) {
+			array.push(this._children.get(k)!);
 		}
-		return array.sort((a, b) => this.compare(a, b));
+		return array;
+		//return array.sort((a, b) => this.compare(a, b));
 	}
 
 	// skips intermediate single-child nodes
@@ -428,7 +431,7 @@ export class DesyntHistoryView extends ViewPane {
 	private changeScheduler!: RunOnceScheduler;
 	private treeNeedsRefreshOnVisible = true;
 	private filter!: DesyntHistoryFilter;
-	//private menu: IMenu;
+	private keyRunningNumber: number = 0;
 	constructor(
 		options: IViewletViewOptions,
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -444,7 +447,8 @@ export class DesyntHistoryView extends ViewPane {
 		@IPathService private readonly pathService: IPathService,
 		@IOpenerService openerService: IOpenerService,
 		@IThemeService themeService: IThemeService,
-		@ITelemetryService telemetryService: ITelemetryService
+		@ITelemetryService telemetryService: ITelemetryService,
+		@IStorageService private readonly storageService: IStorageService
 	) {
 		super(options, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, telemetryService);
 		this.desyntHistoryItemType = CONTEXT_DESYNT_HISTORY_ITEM_TYPE.bindTo(contextKeyService);
@@ -545,6 +549,18 @@ export class DesyntHistoryView extends ViewPane {
 		};
 
 		const registerSessionListeners = (session: IDebugSession) => {
+			this._register(this.storageService.onDidChangeValue(e => {
+				const desired_key = this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt';
+				if (e.key === desired_key) {
+					const value = this.storageService.get(desired_key, StorageScope.APPLICATION);
+					if (e.target === StorageTarget.MACHINE && e.scope === StorageScope.APPLICATION && value) {
+						root.createIfNeeded(this.keyRunningNumber.toString(), () => new DesyntHistoryTreeItem(root, 'change sketch value to: ' + value));
+						this.keyRunningNumber += 1;
+						scheduleRefreshOnVisible();
+					}
+				}
+
+			}, this));
 			this._register(session.onDidChangeName(async () => {
 				const sessionRoot = root.find(session);
 				if (sessionRoot) {
@@ -590,7 +606,7 @@ export class DesyntHistoryView extends ViewPane {
 		this._register(this.tree.onMouseDblClick(e => {
 			root.addDesynt(e);
 			scheduleRefreshOnVisible();
-		}))
+		}));
 		this._register(this.onDidChangeBodyVisibility(visible => {
 			if (visible && this.treeNeedsRefreshOnVisible) {
 				this.changeScheduler.schedule();

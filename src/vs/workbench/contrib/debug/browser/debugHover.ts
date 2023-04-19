@@ -23,9 +23,13 @@ import { Range } from 'vs/editor/common/core/range';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModel';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
 import * as nls from 'vs/nls';
+import { IMenuService } from 'vs/platform/actions/common/actions';
+import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { WorkbenchAsyncDataTree } from 'vs/platform/list/browser/listService';
 import { ILogService } from 'vs/platform/log/common/log';
+import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { asCssVariable, editorHoverBackground, editorHoverBorder, editorHoverForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 import { IInputBoxOptions, renderExpressionValue } from 'vs/workbench/contrib/debug/browser/baseDebugView';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
@@ -90,7 +94,7 @@ export class DebugHoverWidget implements IContentWidget {
 	constructor(
 		private editor: ICodeEditor,
 		@IDebugService private readonly debugService: IDebugService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService private readonly instantiationService: IInstantiationService
 	) {
 		this.toDispose = [];
 
@@ -497,12 +501,19 @@ class DebugHoverComputer {
 	}
 }
 export class HoverVariablesRenderer extends VariablesRenderer {
+	constructor(linkDetector: LinkDetector,
+		@IMenuService menuService: IMenuService,
+		@IContextKeyService contextKeyService: IContextKeyService,
+		@IDebugService debugService: IDebugService,
+		@IContextViewService contextViewService: IContextViewService,
+		@IStorageService private readonly storageService: IStorageService) {
+		super(linkDetector, menuService, contextKeyService, debugService, contextViewService);
+	}
 	protected override  getInputBoxOptions(expression: IExpression): IInputBoxOptions {
-		//const variable = <Variable>expression;
-		//const variableParent = <Expression>variable.parent;
 		const inputBoxOptions = super.getInputBoxOptions(expression);
 		const oldOnFinish = inputBoxOptions.onFinish;
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
+			this.storageService.store(this.debugService.getViewModel()?.focusedSession?.getId()??'desynt', value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			oldOnFinish(value, success);
 		};
 
