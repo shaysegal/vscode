@@ -286,7 +286,7 @@ export class DeSyntView extends ViewPane {
 		const session = await this.debugService.getViewModel().focusedSession;
 		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
 		if (session && stackFrame) {
-			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}'})`;
+			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}','overrideValue': None})`;
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			console.log(SyntDict);
 		}

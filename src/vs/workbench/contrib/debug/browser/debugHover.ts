@@ -155,6 +155,11 @@ export class DebugHoverWidget implements IContentWidget {
 				if (session && e.element instanceof Variable && session.capabilities.supportsSetVariable && !e.element.presentationHint?.attributes?.includes('readOnly') && !e.element.presentationHint?.lazy) {
 					this.debugService.getViewModel().setSelectedExpression(e.element, false);
 				}
+			} else if (e.element && e.element.name.replaceAll('\'', '') === 'overrideValue') {
+				const session = this.debugService.getViewModel().focusedSession;
+				if (session && e.element instanceof Variable && session.capabilities.supportsSetVariable && !e.element.presentationHint?.attributes?.includes('readOnly') && !e.element.presentationHint?.lazy) {
+					this.debugService.getViewModel().setSelectedExpression(e.element, false);
+				}
 			}
 		}
 		));
@@ -513,7 +518,7 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 		const inputBoxOptions = super.getInputBoxOptions(expression);
 		const oldOnFinish = inputBoxOptions.onFinish;
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
-			this.storageService.store(this.debugService.getViewModel()?.focusedSession?.getId()??'desynt', value, StorageScope.PROFILE, StorageTarget.MACHINE);
+			this.storageService.store(this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt', value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			oldOnFinish(value, success);
 		};
 

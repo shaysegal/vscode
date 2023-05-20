@@ -44,7 +44,7 @@ import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity'
 import { FloatingClickWidget } from 'vs/workbench/browser/codeeditor';
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
-import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
+import { CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 
@@ -116,7 +116,7 @@ function createInlineValueDecoration(lineNumber: number, contentText: string, co
 		},
 	];
 }
-function createInlineValueDecorationDesynt(lineNumber: number, contentText: string, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
+function createInlineValueDecorationDesynt(lineNumber: number, contentText: string, striked: boolean, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
 	// If decoratorText is too long, trim and add ellipses. This could happen for minified files with everything on a single line
 	if (contentText.length > MAX_INLINE_DECORATOR_LENGTH) {
 		contentText = contentText.substring(0, MAX_INLINE_DECORATOR_LENGTH) + '...';
@@ -134,6 +134,33 @@ function createInlineValueDecorationDesynt(lineNumber: number, contentText: stri
 				description: 'debug-inline-value-decoration-desynt',
 				after: {
 					content: replaceWsWithNoBreakWs(' SUGGESTED SOLUTION: ' + contentText),
+					inlineClassName: striked ? 'debug-inline-value-striked' : 'debug-inline-value',
+					inlineClassNameAffectsLetterSpacing: true,
+					cursorStops: InjectedTextCursorStops.None
+				},
+				showIfCollapsed: true,
+			}
+		}
+	];
+}
+function createFutureInlineValueDecoration(lineNumber: number, contentText: string, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
+	// If decoratorText is too long, trim and add ellipses. This could happen for minified files with everything on a single line
+	if (contentText.length > MAX_INLINE_DECORATOR_LENGTH) {
+		contentText = contentText.substring(0, MAX_INLINE_DECORATOR_LENGTH) + '...';
+	}
+
+	return [
+		{
+			range: {
+				startLineNumber: lineNumber,
+				endLineNumber: lineNumber,
+				startColumn: column,
+				endColumn: column
+			},
+			options: {
+				description: 'debug-inline-value-future-desynt',
+				after: {
+					content: replaceWsWithNoBreakWs(' Future Value: ' + contentText),
 					inlineClassName: 'debug-inline-value',
 					inlineClassNameAffectsLetterSpacing: true,
 					cursorStops: InjectedTextCursorStops.None
@@ -250,6 +277,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private altPressed = false;
 	private oldDecorations = this.editor.createDecorationsCollection();
 	private readonly debounceInfo: IFeatureDebounceInformation;
+	private candidateExist: IContextKey<boolean>;
 
 	constructor(
 		private editor: ICodeEditor,
@@ -269,6 +297,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		this.registerListeners();
 		this.exceptionWidgetVisible = CONTEXT_EXCEPTION_WIDGET_VISIBLE.bindTo(contextKeyService);
 		this.toggleExceptionWidget();
+		this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
 	}
 
 	private registerListeners(): void {
@@ -695,7 +724,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			allDecorations = [];
 			const lineDecorations = new Map<number, InlineSegment[]>();
 
-			const promises = flatten(providers.map(provider => ranges.map(range => Promise.resolve(provider.provideInlineValues(model, range, ctx, token)).then(async (result) => {
+			const promises = await flatten(providers.map(provider => ranges.map(range => Promise.resolve(provider.provideInlineValues(model, range, ctx, token)).then(async (result) => {
 				if (result) {
 					for (const iv of result) {
 
@@ -788,29 +817,55 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				// Deduplicate decorations since same variable can appear in multiple scopes, leading to duplicated decorations #129770
 				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
 			if (SyntDict) {
-				this.addDesyntInsightToDecorations(SyntDict, allDecorations);
+				await this.addDesyntInsightToDecorations(SyntDict, allDecorations, stackFrame.range as Range);
 			}
 		}
 
 		this.oldDecorations.set(allDecorations);
 	}
-	private addDesyntInsightToDecorations(SyntDict: DebugProtocol.EvaluateResponse, allDecorations: IModelDeltaDecoration[]): void {
+	private async addDesyntInsightToDecorations(SyntDict: DebugProtocol.EvaluateResponse, allDecorations: IModelDeltaDecoration[], current_range: Range): Promise<void> {
 		const solutionKey = "solution";
 		const allDecorationsLineAndColumn = allDecorations.map(decoration => {
 			return { line: decoration.range.startLineNumber, column: decoration.range.startColumn, type: decoration.options.description };
 		}).filter(decoration => decoration.type === 'debug-inline-value-decoration');
 
-		allDecorationsLineAndColumn.forEach(decoration => {
+		for (const decoration of allDecorationsLineAndColumn) {
 			if (decoration.line in SyntDict) {
-				if (solutionKey in (SyntDict as any)[decoration.line]) {
-					const desyntDecoration = createInlineValueDecorationDesynt(decoration.line, (SyntDict as any)[decoration.line][solutionKey]);
+				const objSyntDict = SyntDict as any;
+				if (current_range.containsPosition(new Position(decoration.line, 1))) {
+					const futureValue = await this.getDesyntFutureValue(decoration.line);
+					if (futureValue && futureValue.body && futureValue.body.result) {
+						const futureDecoration = createFutureInlineValueDecoration(decoration.line, futureValue.body.result);
+						allDecorations.push(...futureDecoration);
+					}
+					allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
+				}
+				if (solutionKey in objSyntDict[decoration.line]) {
+					//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
+					const striked = 'overrideValue' in objSyntDict[decoration.line] && objSyntDict[decoration.line]['overrideValue'] !== null;
+					this.candidateExist.set(!striked);
+					const desyntDecoration = createInlineValueDecorationDesynt(decoration.line, objSyntDict[decoration.line][solutionKey], striked);
 					allDecorations.push(...desyntDecoration);
 				}
 			}
-		});
+		}
 
 		return;
 	}
+	private async getDesyntFutureValue(line_number: number): Promise<DebugProtocol.EvaluateResponse | undefined> {
+		const session = await this.debugService.getViewModel().focusedSession;
+		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
+		const evaluation = `ad_hoc_eval_solution(${line_number},locals())`;
+		if (session && stackFrame) {
+			const evaluationResult = await session.evaluate(evaluation, stackFrame.frameId);
+			if (evaluationResult) {
+				console.log(evaluationResult);
+				return evaluationResult;
+			}
+		}
+		return undefined;
+	}
+
 	private async getDesyntInsight(stackFrame: IStackFrame): Promise<DebugProtocol.EvaluateResponse | undefined> {
 		const session = await this.debugService.getViewModel().focusedSession;
 		const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict)';

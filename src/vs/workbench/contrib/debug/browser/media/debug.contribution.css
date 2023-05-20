@@ -136,3 +136,8 @@
 	background-color: var(--vscode-editor-inlineValuesBackground);
 	color: var(--vscode-editor-inlineValuesForeground);
 }
+.monaco-workbench .debug-inline-value-striked {
+	background-color: var(--vscode-editor-inlineValuesBackground);
+	color: var(--vscode-editor-inlineValuesForeground);
+	text-decoration: line-through;
+}
