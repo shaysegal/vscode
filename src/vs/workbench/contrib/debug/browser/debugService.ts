@@ -39,7 +39,7 @@ import { ConfigurationManager } from 'vs/workbench/contrib/debug/browser/debugCo
 import { DebugMemoryFileSystemProvider } from 'vs/workbench/contrib/debug/browser/debugMemory';
 import { DebugSession } from 'vs/workbench/contrib/debug/browser/debugSession';
 import { DebugTaskRunner, TaskRunResult } from 'vs/workbench/contrib/debug/browser/debugTaskRunner';
-import { CALLSTACK_VIEW_ID, CONTEXT_BREAKPOINTS_EXIST, CONTEXT_HAS_DEBUGGED, CONTEXT_DEBUG_STATE, CONTEXT_DEBUG_TYPE, CONTEXT_DEBUG_UX, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_MODE, debuggerDisabledMessage, DEBUG_MEMORY_SCHEME, getStateLabel, IAdapterManager, IBreakpoint, IBreakpointData, ICompound, IConfig, IConfigurationManager, IDebugConfiguration, IDebugModel, IDebugService, IDebugSession, IDebugSessionOptions, IEnablement, IExceptionBreakpoint, IGlobalConfig, ILaunch, IStackFrame, IThread, IViewModel, REPL_VIEW_ID, State, VIEWLET_ID } from 'vs/workbench/contrib/debug/common/debug';
+import { CALLSTACK_VIEW_ID, CONTEXT_BREAKPOINTS_EXIST, CONTEXT_HAS_DEBUGGED, CONTEXT_DEBUG_STATE, CONTEXT_DEBUG_TYPE, CONTEXT_DEBUG_UX, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_MODE, debuggerDisabledMessage, DEBUG_MEMORY_SCHEME, getStateLabel, IAdapterManager, IBreakpoint, IBreakpointData, ICompound, IConfig, IConfigurationManager, IDebugConfiguration, IDebugModel, IDebugService, IDebugSession, IDebugSessionOptions, IEnablement, IExceptionBreakpoint, IGlobalConfig, ILaunch, IStackFrame, IThread, IViewModel, REPL_VIEW_ID, State, VIEWLET_ID, CONTEXT_DESYNT_CANDIDATE_EXIST } from 'vs/workbench/contrib/debug/common/debug';
 import { DebugCompoundRoot } from 'vs/workbench/contrib/debug/common/debugCompoundRoot';
 import { Debugger } from 'vs/workbench/contrib/debug/common/debugger';
 import { Breakpoint, DataBreakpoint, DebugModel, FunctionBreakpoint, InstructionBreakpoint } from 'vs/workbench/contrib/debug/common/debugModel';
@@ -86,6 +86,7 @@ export class DebugService implements IDebugService {
 	private activity: IDisposable | undefined;
 	private chosenEnvironments: { [key: string]: string };
 	private haveDoneLazySetup = false;
+	private candidateExist!: IContextKey<boolean>;
 
 	constructor(
 		@IEditorService private readonly editorService: IEditorService,
@@ -207,6 +208,8 @@ export class DebugService implements IDebugService {
 	}
 
 	private initContextKeys(contextKeyService: IContextKeyService): void {
+		//for desynt
+		this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
 		queueMicrotask(() => {
 			contextKeyService.bufferChangeEvents(() => {
 				this.debugType = CONTEXT_DEBUG_TYPE.bindTo(contextKeyService);
@@ -735,6 +738,7 @@ export class DebugService implements IDebugService {
 	}
 
 	async restartSession(session: IDebugSession, restartData?: any): Promise<any> {
+		this.candidateExist.set(false);
 		if (session.saveBeforeRestart) {
 			await saveAllBeforeDebugStart(this.configurationService, this.editorService);
 		}
@@ -805,6 +809,7 @@ export class DebugService implements IDebugService {
 		if (session.capabilities.supportsRestartRequest) {
 			const taskResult = await runTasks();
 			if (taskResult === TaskRunResult.Success) {
+				await this.resetSynthesizer();
 				await session.restart();
 			}
 
@@ -829,7 +834,7 @@ export class DebugService implements IDebugService {
 				if (!resolved) {
 					return c(undefined);
 				}
-
+				await this.resetSynthesizer();
 				try {
 					await this.launchOrAttachToSession(session, shouldFocus);
 					this._onDidNewSession.fire(session);
@@ -840,8 +845,25 @@ export class DebugService implements IDebugService {
 			}, 300);
 		});
 	}
+	private async resetSynthesizer() {
+		const synthesizerUri = 'http://localhost:5000';
+		const synthesizeRoute = 'clear_state';
+		const uri = new URL(`${synthesizerUri}/${synthesizeRoute}`);
+		const res = await fetch(uri,
+			{
+				method: 'GET',
+				headers: {
+					'Access-Control-Allow-Origin': '*',
+				}
+			}
+		);
+		const json = await res.json();
+		console.log(json);
 
+	}
 	async stopSession(session: IDebugSession | undefined, disconnect = false, suspend = false): Promise<any> {
+		this.candidateExist.set(false);
+		await this.resetSynthesizer();
 		if (session) {
 			return disconnect ? session.disconnect(undefined, suspend) : session.terminate();
 		}
