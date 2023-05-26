@@ -43,8 +43,9 @@ import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
 import { FloatingClickWidget } from 'vs/workbench/browser/codeeditor';
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
+import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
-import { CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
+import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 
@@ -277,7 +278,6 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private altPressed = false;
 	private oldDecorations = this.editor.createDecorationsCollection();
 	private readonly debounceInfo: IFeatureDebounceInformation;
-	private candidateExist: IContextKey<boolean>;
 
 	constructor(
 		private editor: ICodeEditor,
@@ -297,7 +297,6 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		this.registerListeners();
 		this.exceptionWidgetVisible = CONTEXT_EXCEPTION_WIDGET_VISIBLE.bindTo(contextKeyService);
 		this.toggleExceptionWidget();
-		this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
 	}
 
 	private registerListeners(): void {
@@ -843,7 +842,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				if (solutionKey in objSyntDict[decoration.line]) {
 					//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
 					const striked = 'overrideValue' in objSyntDict[decoration.line] && objSyntDict[decoration.line]['overrideValue'] !== null;
-					this.candidateExist.set(!striked);
+					(this.debugService as DebugService).candidateExist.set(!striked);
 					const desyntDecoration = createInlineValueDecorationDesynt(decoration.line, objSyntDict[decoration.line][solutionKey], striked);
 					allDecorations.push(...desyntDecoration);
 				}
@@ -872,8 +871,13 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		if (session) {
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			if (SyntDict) {
-				const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"'));
-				return SyntDictJson;
+				try {
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"'));
+					return SyntDictJson;
+				} catch {
+					console.log('SyntDict isn\'t a valid json');
+					return undefined;
+				}
 			}
 		}
 		return undefined;

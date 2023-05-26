@@ -86,7 +86,7 @@ export class DebugService implements IDebugService {
 	private activity: IDisposable | undefined;
 	private chosenEnvironments: { [key: string]: string };
 	private haveDoneLazySetup = false;
-	private candidateExist!: IContextKey<boolean>;
+	public candidateExist!: IContextKey<boolean>;
 
 	constructor(
 		@IEditorService private readonly editorService: IEditorService,
@@ -857,9 +857,12 @@ export class DebugService implements IDebugService {
 				}
 			}
 		);
-		const json = await res.json();
-		console.log(json);
-
+		try {
+			const json = await res.json();
+			console.log(json);
+		} catch (e) {
+			console.log('couldn\'t restart syntthesizer with error', e);
+		}
 	}
 	async stopSession(session: IDebugSession | undefined, disconnect = false, suspend = false): Promise<any> {
 		this.candidateExist.set(false);

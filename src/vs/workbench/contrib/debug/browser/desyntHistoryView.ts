@@ -12,7 +12,7 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { renderViewTree } from 'vs/workbench/contrib/debug/browser/baseDebugView';
-import { IDebugSession, IDebugService, CONTEXT_DESYNT_HISTORY_ITEM_TYPE, } from 'vs/workbench/contrib/debug/common/debug';
+import { IDebugSession, IDebugService, CONTEXT_DESYNT_HISTORY_ITEM_TYPE, State, } from 'vs/workbench/contrib/debug/common/debug';
 import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
 import { IWorkspaceContextService, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -88,7 +88,10 @@ class BaseTreeItem {
 			}
 		}
 	}
-
+	create<T extends BaseTreeItem>(key: string, child: T): T {
+		this._children.set(key, child);
+		return child;
+	}
 	createIfNeeded<T extends BaseTreeItem>(key: string, factory: (parent: BaseTreeItem, label: string) => T): T {
 		let child = <T>this._children.get(key);
 		if (!child) {
@@ -102,6 +105,9 @@ class BaseTreeItem {
 		return this._children.get(key);
 	}
 
+	removeAll(): void {
+		this._children.clear();
+	}
 	remove(key: string): void {
 		this._children.delete(key);
 	}
@@ -165,7 +171,12 @@ class BaseTreeItem {
 		if (child) {
 			return child.getChildren();
 		}*/
-		const keys = [...this._children.keys()].sort((a, b) => parseInt(b) - parseInt(a));
+		const keys = [...this._children.keys()].sort((a, b) => {
+			if (!this._label.startsWith('iteration')) {
+				return parseInt(b) - parseInt(a);
+			}
+			return parseInt(b.split(',')[1]) - parseInt(a.split(',')[1]);
+		});
 		const array: BaseTreeItem[] = [];
 		//for (const child of this._children.values()) {
 		for (const k of keys) {
@@ -432,6 +443,7 @@ export class DesyntHistoryView extends ViewPane {
 	private treeNeedsRefreshOnVisible = true;
 	private filter!: DesyntHistoryFilter;
 	private keyRunningNumber: number = 0;
+	private keyIteration: number = 1;
 	constructor(
 		options: IViewletViewOptions,
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -549,13 +561,27 @@ export class DesyntHistoryView extends ViewPane {
 		};
 
 		const registerSessionListeners = (session: IDebugSession) => {
-			this._register(this.storageService.onDidChangeValue(e => {
+			this._register(this.debugService.onDidChangeState((e) => {
+				if (e === State.Stopped) {
+					this.keyRunningNumber = 0;
+					if (root.getChild(this.keyIteration.toString())) {
+						this.keyIteration += 1;
+					}
+				}
+				if (e === State.Inactive || e === State.Initializing) {
+					this.keyRunningNumber = 0;
+					this.keyIteration = 1;
+					root.removeAll();
+					scheduleRefreshOnVisible();
+				}
+			}
+			));
+			this._register(this.storageService.onDidChangeValue(async e => {
 				const desired_key = this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt';
 				if (e.key === desired_key) {
 					const value = this.storageService.get(desired_key, StorageScope.APPLICATION);
 					if (e.target === StorageTarget.MACHINE && e.scope === StorageScope.APPLICATION && value) {
-						root.createIfNeeded(this.keyRunningNumber.toString(), () => new DesyntHistoryTreeItem(root, 'change sketch value to: ' + value));
-						this.keyRunningNumber += 1;
+						await this.addChangeToDesyntView(root, value);
 						scheduleRefreshOnVisible();
 					}
 				}
@@ -604,7 +630,6 @@ export class DesyntHistoryView extends ViewPane {
 
 		this.changeScheduler.schedule(0);
 		this._register(this.tree.onMouseDblClick(e => {
-			root.addDesynt(e);
 			scheduleRefreshOnVisible();
 		}));
 		this._register(this.onDidChangeBodyVisibility(visible => {
@@ -644,6 +669,39 @@ export class DesyntHistoryView extends ViewPane {
 
 		// populate tree model with source paths from all debug sessions
 		this.debugService.getModel().getSessions().forEach(session => addSourcePathsToSession(session));
+	}
+	async addChangeToDesyntView(root: RootTreeItem, value: string) {
+		const key = this.keyIteration.toString() + ',' + this.keyRunningNumber.toString();
+		let currentParentItem: DesyntHistoryTreeItem;
+		const parentKey = this.keyIteration.toString();
+		if (this.keyRunningNumber === 0) {//new row
+			const parentItem = new DesyntHistoryTreeItem(root, 'iteration ' + this.keyIteration.toString());
+			root.create(parentKey, parentItem);
+			currentParentItem = parentItem;
+			//add input items:
+			const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
+			if (scopes) {
+				const locals = await scopes[0].getChildren();
+				if (locals) {
+					const inputKey = this.keyIteration.toString() + ',-1';
+					const inputItem = new DesyntHistoryTreeItem(parentItem, 'input variables');
+					parentItem.create(inputKey, inputItem);
+					let index = 0;
+					for (const variable of locals) {
+						const variableItem = new DesyntHistoryTreeItem(inputItem, variable.toString());
+						inputItem.create(index.toString(), variableItem);
+						index += 1;
+					}
+
+				}
+			}
+		}
+		else {
+			currentParentItem = root.getChild(parentKey) as DesyntHistoryTreeItem;
+		}
+
+		currentParentItem.createIfNeeded(key, () => new DesyntHistoryTreeItem(currentParentItem, 'set sketch value to: ' + value));
+		this.keyRunningNumber += 1;
 	}
 
 	protected override layoutBody(height: number, width: number): void {

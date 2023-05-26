@@ -270,16 +270,21 @@ export class DeSyntView extends ViewPane {
 				body: JSON.stringify(variablesData)
 			}
 		);
-		const json = await res.json();
-		console.log(json);
+		try {
+			const json = await res.json();
+			console.log(json);
 
-		if (json.program) {
-			const programDetails = json.program;
-			//const pattern = '??';
-			this.debugService.getViewModel().updateViews();
-			await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
-			this.candidateExist.set(true);
+			if (json.program) {
+				const programDetails = json.program;
+				//const pattern = '??';
+				this.debugService.getViewModel().updateViews();
+				await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
+				this.candidateExist.set(true);
+			}
+		} catch (e) {
+			console.log('couldn\'t send to synthesizer with error', e);
 		}
+
 
 	}
 	private async updateDebugger(line: number, program: string) {
