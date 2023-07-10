@@ -54,7 +54,9 @@ interface IVariablesContext {
 	container: DebugProtocol.Variable | DebugProtocol.Scope | DebugProtocol.EvaluateArguments;
 	variable: DebugProtocol.Variable;
 }
-
+export function updateForgetScopes(value: boolean): void {
+	forgetScopes = value;
+}
 export class VariablesView extends ViewPane {
 
 	private updateTreeScheduler: RunOnceScheduler;

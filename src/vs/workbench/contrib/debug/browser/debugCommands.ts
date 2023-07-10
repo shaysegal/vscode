@@ -494,10 +494,10 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			const scopes = await stackFrame.getMostSpecificScopes(stackFrame.range);
 			// Get all top level variables in the scope chain
 			if (codeEditorModel && scopes && session) {
-				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict)';
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 				if (SyntDict) {
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"'));
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 					const sketchLineNumbers = Object.keys(SyntDictJson);
 					const lines = codeEditorModel.getLinesContent();
 					for (const sketchLine of sketchLineNumbers) {

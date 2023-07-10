@@ -849,15 +849,16 @@ export class DebugService implements IDebugService {
 		const synthesizerUri = 'http://localhost:5000';
 		const synthesizeRoute = 'clear_state';
 		const uri = new URL(`${synthesizerUri}/${synthesizeRoute}`);
-		const res = await fetch(uri,
-			{
-				method: 'GET',
-				headers: {
-					'Access-Control-Allow-Origin': '*',
-				}
-			}
-		);
 		try {
+			const res = await fetch(uri,
+				{
+					method: 'GET',
+					headers: {
+						'Access-Control-Allow-Origin': '*',
+					}
+				}
+			);
+
 			const json = await res.json();
 			console.log(json);
 		} catch (e) {

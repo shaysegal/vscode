@@ -23,7 +23,7 @@ import { IDragAndDropData } from 'vs/base/browser/dnd';
 import { ElementsDragAndDropData } from 'vs/base/browser/ui/list/listView';
 import { FuzzyScore } from 'vs/base/common/filters';
 import { IHighlight } from 'vs/base/browser/ui/highlightedlabel/highlightedLabel';
-import { VariablesRenderer } from 'vs/workbench/contrib/debug/browser/variablesView';
+import { VariablesRenderer, updateForgetScopes, } from 'vs/workbench/contrib/debug/browser/variablesView';
 import { IContextKeyService, ContextKeyExpr, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IViewDescriptorService } from 'vs/workbench/common/views';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
@@ -37,6 +37,7 @@ import { createAndFillInContextMenuActions } from 'vs/platform/actions/browser/m
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { defaultButtonStyles } from 'vs/platform/theme/browser/defaultStyles';
+import { INotificationService } from 'vs/platform/notification/common/notification';
 //import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
 
@@ -54,6 +55,7 @@ export class DeSyntView extends ViewPane {
 	private watchItemType: IContextKey<string | undefined>;
 	private variableReadonly: IContextKey<boolean>;
 	private menu: IMenu;
+	private notificationSer: INotificationService;
 	//private editorService: ICodeEditorService;
 	constructor(
 		options: IViewletViewOptions,
@@ -68,10 +70,11 @@ export class DeSyntView extends ViewPane {
 		@IOpenerService openerService: IOpenerService,
 		@IThemeService themeService: IThemeService,
 		@ITelemetryService telemetryService: ITelemetryService,
-		@IMenuService menuService: IMenuService
+		@IMenuService menuService: IMenuService,
+		@INotificationService notificationService: INotificationService,
 	) {
 		super(options, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, telemetryService);
-
+		this.notificationSer = notificationService;
 		this.menu = menuService.createMenu(MenuId.DebugWatchContext, contextKeyService);
 		this._register(this.menu);
 		this.watchExpressionsUpdatedScheduler = new RunOnceScheduler(() => {
@@ -87,7 +90,19 @@ export class DeSyntView extends ViewPane {
 		this.watchItemType = CONTEXT_WATCH_ITEM_TYPE.bindTo(contextKeyService);
 
 	}
-
+	private async ad_hoc_alter_val(): Promise<DebugProtocol.EvaluateResponse | undefined> {
+		const session = await this.debugService.getViewModel().focusedSession;
+		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
+		if (session && stackFrame) {
+			const evaluation = `ad_hoc_alter__a__("${stackFrame.name}")`;
+			const evaluationResult = await session.evaluate(evaluation, stackFrame.frameId);
+			if (evaluationResult) {
+				console.log(evaluationResult);
+				return evaluationResult;
+			}
+		}
+		return undefined;
+	}
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 
@@ -126,14 +141,27 @@ export class DeSyntView extends ViewPane {
 
 		button.label = buttonLabel;
 		this._register(button.onDidClick(async () => {
+			button.label = localize('Loading...', 'Loading...');
 			const session = await this.debugService.getViewModel().focusedSession;
 			const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
 			if (session && stackFrame) {
-				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict)';
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 				if (SyntDict) {
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', ''));
-					await this.sendToSynthesizer(SyntDictJson);
+					let SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replace(/\bNaN\b/g, '"NaN"'));
+					if (Object.keys(SyntDictJson).length === 0) {//empty object
+						await this.ad_hoc_alter_val();
+						const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+						SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replace(/\bNaN\b/g, '"NaN"'));
+					}
+					try {
+						await this.sendToSynthesizer(SyntDictJson);
+					} catch (e) {
+						this.notificationSer.warn('Synthesizer Failed , check logs for additional data');
+						console.log('problem sending to synthesizer with exception', e);
+
+					}
+					button.label = buttonLabel;
 				}
 			}
 		}));
@@ -277,11 +305,13 @@ export class DeSyntView extends ViewPane {
 			if (json.program) {
 				const programDetails = json.program;
 				//const pattern = '??';
+				this.candidateExist.set(true);
+				updateForgetScopes(false);
 				this.debugService.getViewModel().updateViews();
 				await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
-				this.candidateExist.set(true);
 			}
 		} catch (e) {
+			this.notificationSer.warn('Failed update debuger with Synthesizer result');
 			console.log('couldn\'t send to synthesizer with error', e);
 		}
 
