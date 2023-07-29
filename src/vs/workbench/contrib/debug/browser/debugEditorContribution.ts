@@ -266,7 +266,7 @@ function getWordToLineNumbersMap(model: ITextModel | null): Map<string, number[]
 export class DebugEditorContribution implements IDebugEditorContribution {
 
 	private toDispose: IDisposable[];
-	private hoverWidget: DebugHoverWidget;
+	readonly hoverWidget: DebugHoverWidget;
 	private hoverPosition: Position | null = null;
 	private mouseDown = false;
 	private exceptionWidgetVisible: IContextKey<boolean>;
@@ -815,7 +815,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			allDecorations = distinct(decorationsPerScope.reduce((previous, current) => previous.concat(current), []),
 				// Deduplicate decorations since same variable can appear in multiple scopes, leading to duplicated decorations #129770
 				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
-			if (SyntDict) {
+			if (SyntDict && JSON.stringify(SyntDict) !== '{}') {
 				await this.addDesyntInsightToDecorations(SyntDict, allDecorations, stackFrame.range as Range);
 			}
 		}
@@ -827,9 +827,10 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		const allDecorationsLineAndColumn = allDecorations.map(decoration => {
 			return { line: decoration.range.startLineNumber, column: decoration.range.startColumn, type: decoration.options.description };
 		}).filter(decoration => decoration.type === 'debug-inline-value-decoration');
-
+		let found = false;
 		for (const decoration of allDecorationsLineAndColumn) {
 			if (decoration.line in SyntDict) {
+				found = true;
 				const objSyntDict = SyntDict as any;
 				if (current_range.containsPosition(new Position(decoration.line, 1))) {
 					const futureValue = await this.getDesyntFutureValue(decoration.line);
@@ -848,7 +849,25 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				}
 			}
 		}
-
+		if (!found) { // show deSynt decoration even if there is no decoraion for it
+			const objSyntDict = SyntDict as any;
+			const sketch_line = current_range.startLineNumber;
+			if (current_range.containsPosition(new Position(sketch_line, 1))) {
+				const futureValue = await this.getDesyntFutureValue(sketch_line);
+				if (futureValue && futureValue.body && futureValue.body.result) {
+					const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
+					allDecorations.push(...futureDecoration);
+				}
+				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
+			}
+			if (solutionKey in objSyntDict[sketch_line]) {
+				//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
+				const striked = 'overrideValue' in objSyntDict[sketch_line] && objSyntDict[sketch_line]['overrideValue'] !== null;
+				(this.debugService as DebugService).candidateExist.set(!striked);
+				const desyntDecoration = createInlineValueDecorationDesynt(sketch_line, objSyntDict[sketch_line][solutionKey], striked);
+				allDecorations.push(...desyntDecoration);
+			}
+		}
 		return;
 	}
 	private async getDesyntFutureValue(line_number: number): Promise<DebugProtocol.EvaluateResponse | undefined> {
@@ -867,12 +886,12 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 	private async getDesyntInsight(stackFrame: IStackFrame): Promise<DebugProtocol.EvaluateResponse | undefined> {
 		const session = await this.debugService.getViewModel().focusedSession;
-		const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict)';
+		const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 		if (session) {
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			if (SyntDict) {
 				try {
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"'));
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 					return SyntDictJson;
 				} catch {
 					console.log('SyntDict isn\'t a valid json');

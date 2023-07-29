@@ -39,6 +39,7 @@ import { ConfigurationManager } from 'vs/workbench/contrib/debug/browser/debugCo
 import { DebugMemoryFileSystemProvider } from 'vs/workbench/contrib/debug/browser/debugMemory';
 import { DebugSession } from 'vs/workbench/contrib/debug/browser/debugSession';
 import { DebugTaskRunner, TaskRunResult } from 'vs/workbench/contrib/debug/browser/debugTaskRunner';
+import { RestartSynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, SythesizerCleanRequestRoute } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { CALLSTACK_VIEW_ID, CONTEXT_BREAKPOINTS_EXIST, CONTEXT_HAS_DEBUGGED, CONTEXT_DEBUG_STATE, CONTEXT_DEBUG_TYPE, CONTEXT_DEBUG_UX, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_MODE, debuggerDisabledMessage, DEBUG_MEMORY_SCHEME, getStateLabel, IAdapterManager, IBreakpoint, IBreakpointData, ICompound, IConfig, IConfigurationManager, IDebugConfiguration, IDebugModel, IDebugService, IDebugSession, IDebugSessionOptions, IEnablement, IExceptionBreakpoint, IGlobalConfig, ILaunch, IStackFrame, IThread, IViewModel, REPL_VIEW_ID, State, VIEWLET_ID, CONTEXT_DESYNT_CANDIDATE_EXIST } from 'vs/workbench/contrib/debug/common/debug';
 import { DebugCompoundRoot } from 'vs/workbench/contrib/debug/common/debugCompoundRoot';
 import { Debugger } from 'vs/workbench/contrib/debug/common/debugger';
@@ -846,22 +847,30 @@ export class DebugService implements IDebugService {
 		});
 	}
 	private async resetSynthesizer() {
-		const synthesizerUri = 'http://localhost:5000';
-		const synthesizeRoute = 'clear_state';
-		const uri = new URL(`${synthesizerUri}/${synthesizeRoute}`);
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), RestartSynthesisTimeoutInMiliSeconds);
+		const uri = new URL(`${SynthesizerUrl}:${SynthesizerPort}/${SythesizerCleanRequestRoute}`);
+		this.notificationService.info('Try to reset DeSynt, it might take a second..');
 		try {
 			const res = await fetch(uri,
 				{
 					method: 'GET',
 					headers: {
 						'Access-Control-Allow-Origin': '*',
-					}
+					},
+					signal: controller.signal
 				}
-			);
-
-			const json = await res.json();
-			console.log(json);
+			).catch(rejected => {
+				this.notificationService.error('couldn\'t restart synthesizer with error ' + rejected.name);
+				console.log(rejected);
+			});
+			clearTimeout(timeoutId);
+			if (res) {
+				const json = await res.json();
+				console.log(json);
+			}
 		} catch (e) {
+			this.notificationService.error('couldn\'t restart synthesizer with error ' + e.name);
 			console.log('couldn\'t restart syntthesizer with error', e);
 		}
 	}

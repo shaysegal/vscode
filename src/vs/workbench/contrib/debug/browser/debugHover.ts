@@ -89,7 +89,7 @@ export class DebugHoverWidget implements IContentWidget {
 	private scrollbar!: DomScrollableElement;
 	private debugHoverComputer: DebugHoverComputer;
 	private normalContent: string = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover ', isMacintosh ? 'Option' : 'Alt');
-	private sketchContent: string = nls.localize({ key: 'quickTip2', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'click to change acceptamce option ', isMacintosh ? 'Option' : 'Alt');
+	private sketchContent: string = nls.localize({ key: 'quickTip2', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'click to change acceptance option ', isMacintosh ? 'Option' : 'Alt');
 	private mouseTarget: IMouseTarget | undefined;
 	constructor(
 		private editor: ICodeEditor,
@@ -163,6 +163,44 @@ export class DebugHoverWidget implements IContentWidget {
 			}
 		}
 		));
+		const findElementByText = function (parentElement: any, searchText: string) {
+			const elements = parentElement.getElementsByTagName('*');
+
+			for (let i = 0; i < elements.length; i++) {
+				const element = elements[i];
+
+				if (element.textContent.match('^' + searchText + '.')) {
+					return element;
+				}
+
+				const innerElement: any = findElementByText(element, searchText);
+				if (innerElement) {
+					return innerElement;
+				}
+			}
+
+			return null; // Element not found
+		};
+		this.toDispose.push(this.tree.onKeyDown((e) => {
+			if (e.key === 'Enter') {
+				if (e.currentTarget) {
+					if ((e.currentTarget as any).innerText.includes('sketchValue') || (e.currentTarget as any).innerText.includes('overrideValue')) {
+						console.log('here');
+						const doubleClickEvent = new Event('dblclick', {
+							bubbles: true,
+							cancelable: true
+						});
+						const sketchvalElement = findElementByText(e.currentTarget, '(sketchValue:|\'overrideValue\':)');
+						if (sketchvalElement) {
+							sketchvalElement.dispatchEvent(doubleClickEvent);
+						}
+						//(e.currentTarget as any).children[0].children[0].children[2].dispatchEvent(doubleClickEvent);
+					}
+				}
+			}
+		}
+		));
+
 
 		this.toDispose.push(this.debugService.getViewModel().onDidSelectExpression(e => {
 			const variable = e?.expression;
@@ -281,6 +319,10 @@ export class DebugHoverWidget implements IContentWidget {
 			this.create();
 		}
 		if ((expression as Expression).inDesynt) {
+			const bp = this.debugService.getModel().getBreakpoints({ lineNumber: position.lineNumber });
+			if (bp.length) {
+				(this.domNode.querySelector('.tip')!.lastChild! as HTMLElement).textContent = bp[0].enabled ? nls.localize("disable", "disable") : nls.localize("enable", "enable");
+			}
 			this.domNode.querySelector('.tip')!.firstChild!.textContent = this.sketchContent;//text
 			(this.domNode.querySelector('.tip')!.lastChild! as HTMLElement).hidden = false;//href
 		} else {
@@ -340,6 +382,7 @@ export class DebugHoverWidget implements IContentWidget {
 
 		} catch {
 			this.complexValueTitle.textContent = expression.value;
+			await this.tree.setInput(expression);
 		}
 		this.complexValueTitle.title = expression.value;
 		this.layoutTreeAndContainer(true);

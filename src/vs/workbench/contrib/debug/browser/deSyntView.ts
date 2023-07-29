@@ -5,7 +5,7 @@
 
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_DESYNT_CANDIDATE_EXIST } from 'vs/workbench/contrib/debug/common/debug';
+import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_IN_DEBUG_MODE } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -38,7 +38,11 @@ import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { defaultButtonStyles } from 'vs/platform/theme/browser/defaultStyles';
 import { INotificationService } from 'vs/platform/notification/common/notification';
-//import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
+import { SynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, SythesisRequestRoute } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+
+import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
+import { KeybindingWeight, KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
+
 
 
 const MAX_VALUE_RENDER_LENGTH_IN_VIEWLET = 1024;
@@ -137,30 +141,47 @@ export class DeSyntView extends ViewPane {
 		this.tree.setInput(this.debugService);
 		CONTEXT_DESYNT_FOCUSED.bindTo(this.tree.contextKeyService);
 		//my code adding button of synthesis options
-
-
+		let clicked = false;
+		const controller = new AbortController();
 		button.label = buttonLabel;
 		this._register(button.onDidClick(async () => {
-			button.label = localize('Loading...', 'Loading...');
+			if (clicked) {
+				button.label = 'Cancled';
+				controller.abort();
+				return;
+
+			}
+			clicked = true;
+			let count = 3;
+			button.label = 'Loading' + ('.'.repeat(count));
+			const animation = setInterval(() => {
+				count = (count + 1) % 4;
+				button.label = 'Loading' + ('.'.repeat(count));
+			}, 2000);
 			const session = await this.debugService.getViewModel().focusedSession;
 			const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
 			if (session && stackFrame) {
 				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 				if (SyntDict) {
-					let SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replace(/\bNaN\b/g, '"NaN"'));
+					let SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
 					if (Object.keys(SyntDictJson).length === 0) {//empty object
 						await this.ad_hoc_alter_val();
 						const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
-						SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replace(/\bNaN\b/g, '"NaN"'));
+						SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
 					}
 					try {
-						await this.sendToSynthesizer(SyntDictJson);
+						await this.sendToSynthesizer(SyntDictJson, controller);
 					} catch (e) {
-						this.notificationSer.warn('Synthesizer Failed , check logs for additional data');
-						console.log('problem sending to synthesizer with exception', e);
-
+						if (e.message === 'Cancled') {
+							this.notificationSer.info('Cancled');
+						} else {
+							this.notificationSer.warn('Synthesizer Failed , check logs for additional data');
+							console.log('problem sending to synthesizer with exception', e);
+						}
 					}
+					clicked = false;
+					clearInterval(animation);
 					button.label = buttonLabel;
 				}
 			}
@@ -237,6 +258,20 @@ export class DeSyntView extends ViewPane {
 				await this.tree.expand(e);
 			}
 		}));
+		KeybindingsRegistry.registerCommandAndKeybindingRule({
+			id: 'desynt.runOrCancel',
+			weight: KeybindingWeight.WorkbenchContrib,
+			primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KeyD, KeyMod.CtrlCmd | KeyCode.KeyS),
+			when: CONTEXT_IN_DEBUG_MODE,
+			handler: async (accessor: ServicesAccessor) => {
+				const clickEvent = new Event('click', {
+					bubbles: true,
+					cancelable: true
+				});
+				button.element.dispatchEvent(clickEvent);
+			}
+		});
+
 	}
 
 	protected override layoutBody(height: number, width: number): void {
@@ -285,37 +320,54 @@ export class DeSyntView extends ViewPane {
 			getActionsContext: () => element && selection.includes(element) ? selection : element ? [element] : [],
 		});
 	}
-	private async sendToSynthesizer(variablesData: Object) {
-		const synthesizerUri = 'http://localhost:5000';
-		const synthesizeRoute = 'synt_with_state';
-		const uri = new URL(`${synthesizerUri}/${synthesizeRoute}`);
+	private async sendToSynthesizer(variablesData: Object, controller: AbortController) {
+		const signal = controller.signal;
+		const uri = new URL(`${SynthesizerUrl}:${SynthesizerPort}/${SythesisRequestRoute}`);
+		const sto = setTimeout(() => { timedout = true; controller.abort(); }, SynthesisTimeoutInMiliSeconds);
+		let timedout = false;
+		let userAbort = false;
 		const res = await fetch(uri,
 			{
 				method: 'POST',
 				headers: {
 					'Access-Control-Allow-Origin': '*',
 				},
-				body: JSON.stringify(variablesData)
-			}
-		);
-		try {
-			const json = await res.json();
-			console.log(json);
+				body: JSON.stringify(variablesData),
+				signal: signal
 
-			if (json.program) {
-				const programDetails = json.program;
-				//const pattern = '??';
-				this.candidateExist.set(true);
-				updateForgetScopes(false);
-				this.debugService.getViewModel().updateViews();
-				await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
 			}
-		} catch (e) {
-			this.notificationSer.warn('Failed update debuger with Synthesizer result');
-			console.log('couldn\'t send to synthesizer with error', e);
+		).catch(error => {
+			if (error.name === 'AbortError') {
+				if (!timedout) {
+					userAbort = true;
+				}
+				console.log('synthesizer timeout');
+			} else {
+				console.log('unkown error');
+			}
+
+		});
+		clearTimeout(sto);
+		if (timedout) {
+			throw new Error('Timeout');
 		}
+		if (userAbort) {
+			throw new Error('Cancled');
+		}
+		if (!res) {
+			throw new Error('Synthesizer Timeout');
+		}
+		const json = await res.json();
+		console.log(json);
 
-
+		if (json.program) {
+			const programDetails = json.program;
+			//const pattern = '??';
+			this.candidateExist.set(true);
+			updateForgetScopes(false);
+			this.debugService.getViewModel().updateViews();
+			await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
+		}
 	}
 	private async updateDebugger(line: number, program: string) {
 		const session = await this.debugService.getViewModel().focusedSession;
@@ -324,6 +376,7 @@ export class DeSyntView extends ViewPane {
 			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}','overrideValue': None})`;
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			console.log(SyntDict);
+			this.notificationSer.info(`Successully synthesized program for line: ${line}`);
 		}
 	}
 }

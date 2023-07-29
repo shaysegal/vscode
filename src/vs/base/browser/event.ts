@@ -38,7 +38,7 @@ export class DomEmitter<K extends keyof DOMEventMap> implements IDisposable {
 	constructor(element: EventHandler, type: K, useCapture?: boolean);
 	constructor(element: EventHandler, type: K, useCapture?: boolean) {
 		const fn = (e: Event) => {
-			if (!((e.type === 'click') && /monaco-list|mouse-support|last-focused|element-focused|selection-single/.test((e.currentTarget! as any).className) && (e.currentTarget! as any).innerText.includes('sketchValue'))) {
+			if (!((e.type === 'click') && /monaco-list|mouse-support|last-focused|element-focused|selection-single/.test((e.currentTarget! as any).className) && ((e.currentTarget! as any).innerText.includes('sketchValue') || (e.currentTarget! as any).innerText.includes('overrideValue')))) {
 				this.emitter.fire(e as DOMEventMap[K]);
 			}
 		};

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as nls from 'vs/nls';
-import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
+import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { IListService } from 'vs/platform/list/browser/listService';
@@ -38,6 +38,9 @@ import { ILocalizedString } from 'vs/platform/action/common/action';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 import { ITextModel, ValidAnnotatedEditOperation } from 'vs/editor/common/model';
 import { Range } from 'vs/editor/common/core/range';
+import { ModesHoverController } from 'vs/editor/contrib/hover/browser/hover';
+import { Position } from 'vs/editor/common/core/position';
+import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
 export const TOGGLE_INLINE_BREAKPOINT_ID = 'editor.debug.action.toggleInlineBreakpoint';
@@ -476,15 +479,78 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		}
 	}
 });
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: 'workbench.action.debug.EditSketch',
+	weight: KeybindingWeight.WorkbenchContrib,
+	primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KeyD, KeyMod.CtrlCmd | KeyCode.KeyI),
+	when: CONTEXT_IN_DEBUG_MODE,
+	handler: async (accessor, _, context) => {
+		const codeEditorService = accessor.get(ICodeEditorService);
+		const codeEditor = codeEditorService.getActiveCodeEditor();
+		if (!codeEditor) {
+			return;
+		}
+		const controller = ModesHoverController.get(codeEditor);
+		if (!controller) {
+			return;
+		}
+		const pattern = '??';
+		const lines = codeEditor.getModel()!.getLinesContent();
+		let lineNumber = 1;
+		for (const line of lines) {
+			const patternPosition = line.indexOf(pattern);
+			if (patternPosition < 0) {
+				lineNumber++;
+				continue;
+
+			}
+			const pos = new Position(lineNumber, patternPosition + 1);
+			const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID);
+			if (!codeEditorContribution) {
+				return null;
+			}
+			const res = await codeEditorContribution.showHover(pos, true);
+			const findElementByText = function (parentElement: any, searchText: string) {
+				const elements = parentElement.getElementsByTagName('*');
+
+				for (let i = 0; i < elements.length; i++) {
+					const element = elements[i];
+
+					if (element.textContent.match('^' + searchText + '.')) {
+						return element;
+					}
+
+					const innerElement: any = findElementByText(element, searchText);
+					if (innerElement) {
+						return innerElement;
+					}
+				}
+
+				return null; // Element not found
+			};
+			const doubleClickEvent = new Event('dblclick', {
+				bubbles: true,
+				cancelable: true
+			});
+			const sketchvalElement = findElementByText((codeEditorContribution as DebugEditorContribution).hoverWidget.getDomNode(), '(sketchValue:|\'overrideValue\':)');
+			if (sketchvalElement) {
+				sketchvalElement.dispatchEvent(doubleClickEvent);
+			}
+			return res;
+		}
+	}
+
+});
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: ACCEPT_DESYNT_ID,
 	weight: KeybindingWeight.WorkbenchContrib,
-	primary: KeyMod.Shift | KeyCode.F6,
+	primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KeyD, KeyMod.CtrlCmd | KeyCode.KeyA),
 	when: CONTEXT_IN_DEBUG_MODE,
 	handler: async (accessor, _, context) => {
 		const debugService = accessor.get(IDebugService);
 		const codeEditorService = accessor.get(ICodeEditorService);
+		const editorService = accessor.get(IEditorService);
 		const codeEditor = codeEditorService.getActiveCodeEditor();
 		const stackFrame = debugService.getViewModel().focusedStackFrame;
 		const pattern = '??';
@@ -509,6 +575,17 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 						codeEditorModel.applyEdits([
 							new ValidAnnotatedEditOperation(null, range, program, false, false, false)
 						]);
+
+						const control = editorService.activeTextEditorControl;
+						if (isCodeEditor(control)) { // remove breakpoint after accept
+							const model = control.getModel();
+							if (model) {
+								const bps = debugService.getModel().getBreakpoints({ uri: model.uri, lineNumber: line });
+								if (bps.length) {
+									debugService.removeBreakpoints(bps[0]!.getId());
+								}
+							}
+						}
 					}
 				}
 
@@ -1082,7 +1159,12 @@ async function addSketchBreakpoints(codeEditorModel: ITextModel | null, debugSer
 				if (lines[i].includes("#") && lines[i].indexOf("#") < lines[i].indexOf("??")) {
 					continue;
 				}
-				await debugService.addBreakpoints(activeFileUri, [{ lineNumber: i + 1 }]);
+				const old_bp_array = await debugService.getModel().getBreakpoints({ uri: activeFileUri, lineNumber: i + 1 });
+				if (old_bp_array.length) {
+					await debugService.enableOrDisableBreakpoints(true, old_bp_array[0]);
+				} else {
+					await debugService.addBreakpoints(activeFileUri, [{ lineNumber: i + 1 }]);
+				}
 			}
 		}
 	}
