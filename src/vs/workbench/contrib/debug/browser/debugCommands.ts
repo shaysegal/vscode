@@ -8,11 +8,11 @@ import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { IListService } from 'vs/platform/list/browser/listService';
-import { IDebugService, IEnablement, CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, CONTEXT_VARIABLES_FOCUSED, EDITOR_CONTRIBUTION_ID, IDebugEditorContribution, CONTEXT_IN_DEBUG_MODE, CONTEXT_EXPRESSION_SELECTED, IConfig, IStackFrame, IThread, IDebugSession, CONTEXT_DEBUG_STATE, IDebugConfiguration, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, REPL_VIEW_ID, CONTEXT_DEBUGGERS_AVAILABLE, State, getStateLabel, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, VIEWLET_ID, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_REPL, CONTEXT_STEP_INTO_TARGETS_SUPPORTED } from 'vs/workbench/contrib/debug/common/debug';
+import { IDebugService, IEnablement, CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, CONTEXT_VARIABLES_FOCUSED, EDITOR_CONTRIBUTION_ID, IDebugEditorContribution, CONTEXT_IN_DEBUG_MODE, CONTEXT_EXPRESSION_SELECTED, IConfig, IStackFrame, IThread, IDebugSession, CONTEXT_DEBUG_STATE, IDebugConfiguration, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, REPL_VIEW_ID, CONTEXT_DEBUGGERS_AVAILABLE, State, getStateLabel, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, VIEWLET_ID, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_REPL, CONTEXT_STEP_INTO_TARGETS_SUPPORTED, DESYNT_VIEW_ID } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable, Breakpoint, FunctionBreakpoint, DataBreakpoint, Thread } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IExtensionsViewPaneContainer, VIEWLET_ID as EXTENSIONS_VIEWLET_ID } from 'vs/workbench/contrib/extensions/common/extensions';
 import { ICodeEditor, isCodeEditor } from 'vs/editor/browser/editorBrowser';
-import { MenuRegistry, MenuId, Action2, registerAction2 } from 'vs/platform/actions/common/actions';
+import { MenuRegistry, MenuId, Action2, registerAction2, IMenuService } from 'vs/platform/actions/common/actions';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -26,7 +26,7 @@ import { ITextResourcePropertiesService } from 'vs/editor/common/services/textRe
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IQuickInputService, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
-import { IViewsService, ViewContainerLocation } from 'vs/workbench/common/views';
+import { IViewDescriptorService, IViewsService, ViewContainerLocation } from 'vs/workbench/common/views';
 import { deepClone } from 'vs/base/common/objects';
 import { isWeb, isWindows } from 'vs/base/common/platform';
 import { saveAllBeforeDebugStart } from 'vs/workbench/contrib/debug/common/debugUtils';
@@ -41,6 +41,15 @@ import { Range } from 'vs/editor/common/core/range';
 import { ModesHoverController } from 'vs/editor/contrib/hover/browser/hover';
 import { Position } from 'vs/editor/common/core/position';
 import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
+import { doesTrigger, minimumUniqueExamples4Triggerless } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+import { DeSyntView } from 'vs/workbench/contrib/debug/browser/deSyntView';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
+import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
+
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
 export const TOGGLE_INLINE_BREAKPOINT_ID = 'editor.debug.action.toggleInlineBreakpoint';
@@ -150,6 +159,35 @@ async function getThreadAndRun(accessor: ServicesAccessor, sessionAndThreadId: C
 		await run(thread);
 	}
 }
+async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThreadId: CallStackContext | unknown, run: (thread: IThread) => Promise<void>): Promise<void> {
+	let thread: IThread | undefined;
+	if (isThreadContext(sessionAndThreadId)) {
+		const session = debugService.getModel().getSession(sessionAndThreadId.sessionId);
+		if (session) {
+			thread = session.getAllThreads().find(t => t.getId() === sessionAndThreadId.threadId);
+		}
+	} else if (isSessionContext(sessionAndThreadId)) {
+		const session = debugService.getModel().getSession(sessionAndThreadId.sessionId);
+		if (session) {
+			const threads = session.getAllThreads();
+			thread = threads.length > 0 ? threads[0] : undefined;
+		}
+	}
+
+	if (!thread) {
+		thread = debugService.getViewModel().focusedThread;
+		if (!thread) {
+			const focusedSession = debugService.getViewModel().focusedSession;
+			const threads = focusedSession ? focusedSession.getAllThreads() : undefined;
+			thread = threads && threads.length ? threads[0] : undefined;
+		}
+	}
+
+	if (thread) {
+		await run(thread);
+	}
+}
+
 
 function isStackFrameContext(obj: any): obj is CallStackContext {
 	return obj && typeof obj.sessionId === 'string' && typeof obj.threadId === 'string' && typeof obj.frameId === 'string';
@@ -603,11 +641,35 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	when: CONTEXT_DEBUG_STATE.isEqualTo('stopped'),
 	handler: async (accessor: ServicesAccessor, _: string, context: CallStackContext | unknown) => {
 		const contextKeyService = accessor.get(IContextKeyService);
-		if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-			await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
-		} else {
-			await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
+		const codeEditorService = accessor.get(ICodeEditorService);
+		const codeEditor = codeEditorService.getActiveCodeEditor();
+		const debugService = accessor.get(IDebugService);
+		const localDesyntView = createLocalDesyntView(accessor);
+
+		if (doesTrigger) {
+			if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+				await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
+			} else {
+				await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
+			}
+			return;
 		}
+
+		const sf = await debugService.getViewModel().focusedStackFrame;
+		if (codeEditor && sf) {
+			const currentLine = sf.range.startLineNumber;
+			const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+			if (currentCodeLine && currentCodeLine.includes('??')) {
+				const session = await debugService.getViewModel().focusedSession;
+				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+			}
+		}
+		if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+			await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
+		} else {
+			await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
+		}
+		return;
 	}
 });
 
@@ -622,11 +684,38 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	when: CONTEXT_DEBUG_STATE.notEqualsTo('inactive'),
 	handler: async (accessor: ServicesAccessor, _: string, context: CallStackContext | unknown) => {
 		const contextKeyService = accessor.get(IContextKeyService);
-		if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-			await getThreadAndRun(accessor, context, (thread: IThread) => thread.stepIn('instruction'));
-		} else {
-			await getThreadAndRun(accessor, context, (thread: IThread) => thread.stepIn());
+		const codeEditorService = accessor.get(ICodeEditorService);
+		const codeEditor = codeEditorService.getActiveCodeEditor();
+		const debugService = accessor.get(IDebugService);
+		const localDesyntView = createLocalDesyntView(accessor);
+		let onSketch = false; // we do not want to allow step into the sketch and reveal our magic ;)
+
+		const sf = await debugService.getViewModel().focusedStackFrame;
+		if (codeEditor && sf) {
+			const currentLine = sf.range.startLineNumber;
+			const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+			if (currentCodeLine && currentCodeLine.includes('??')) {
+				onSketch = true;
+				const session = await debugService.getViewModel().focusedSession;
+				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+			}
 		}
+		if (!onSketch) {
+			if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+				await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.stepIn('instruction'));
+			} else {
+				await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.stepIn());
+
+			}
+			return;
+		}
+		// we are on sketch , change it to step over !
+		if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+			await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
+		} else {
+			await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
+		}
+		return;
 	}
 });
 
@@ -777,15 +866,67 @@ CommandsRegistry.registerCommand({
 		}
 	}
 });
-
+function createLocalDesyntView(accessor: ServicesAccessor): DeSyntView {
+	const debugService = accessor.get(IDebugService);
+	//const commandService = accessor.get(ICommandService);
+	const contextMenuService = accessor.get(IContextMenuService);
+	const keybindingService = accessor.get(IKeybindingService);
+	const instantiationService = accessor.get(IInstantiationService);
+	const viewDescriptorService = accessor.get(IViewDescriptorService);
+	const configurationService = accessor.get(IConfigurationService);
+	const contextKeyService = accessor.get(IContextKeyService);
+	const openerService = accessor.get(IOpenerService);
+	const themeService = accessor.get(IThemeService);
+	const telemetryService = accessor.get(ITelemetryService);
+	const menuService = accessor.get(IMenuService);
+	const notificationService = accessor.get(INotificationService);
+	return new DeSyntView({ id: DESYNT_VIEW_ID, title: 'desyntView' }, contextMenuService, debugService, keybindingService, instantiationService, viewDescriptorService, configurationService, contextKeyService, openerService, themeService, telemetryService, menuService, notificationService);
+}
+async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number) {
+	const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
+	const SyntDict = await session!.evaluate(syntDictEvaluation, stackFrame.frameId);
+	if (SyntDict) {
+		const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+		if (!SyntDictJson[lineNumber]) {
+			return;
+		}
+		if (SyntDictJson[lineNumber]['solution'] && !SyntDictJson[lineNumber]['overrideValue']) {
+			return;
+		}
+		if ((new Set(Object.entries(SyntDictJson[lineNumber]['input']).map(key_val_tuple => JSON.stringify(key_val_tuple[1])))).size < minimumUniqueExamples4Triggerless) {
+			return;
+		}
+		await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
+	}
+}
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: CONTINUE_ID,
 	weight: KeybindingWeight.WorkbenchContrib + 10, // Use a stronger weight to get priority over start debugging F5 shortcut
 	primary: KeyCode.F5,
 	when: CONTEXT_DEBUG_STATE.isEqualTo('stopped'),
 	handler: async (accessor: ServicesAccessor, _: string, context: CallStackContext | unknown) => {
-		await getThreadAndRun(accessor, context, thread => thread.continue());
+		const codeEditorService = accessor.get(ICodeEditorService);
+		const codeEditor = codeEditorService.getActiveCodeEditor();
+		const debugService = accessor.get(IDebugService);
+		const localDesyntView = createLocalDesyntView(accessor);
+
+		if (doesTrigger) {
+			await getThreadAndRun(accessor, context, thread => thread.continue());
+			return;
+		}
+		const sf = await debugService.getViewModel().focusedStackFrame;
+		if (codeEditor && sf) {
+			const currentLine = sf.range.startLineNumber;
+			const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+			if (currentCodeLine && currentCodeLine.includes('??')) {
+				const session = await debugService.getViewModel().focusedSession;
+				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+			}
+		}
+		//should send to synthersizer if not has a solution
+		await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 	}
+
 });
 
 CommandsRegistry.registerCommand({

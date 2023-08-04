@@ -5,7 +5,7 @@
 
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_IN_DEBUG_MODE } from 'vs/workbench/contrib/debug/common/debug';
+import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_IN_DEBUG_MODE, IDebugSession, IStackFrame } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -94,18 +94,25 @@ export class DeSyntView extends ViewPane {
 		this.watchItemType = CONTEXT_WATCH_ITEM_TYPE.bindTo(contextKeyService);
 
 	}
-	private async ad_hoc_alter_val(): Promise<DebugProtocol.EvaluateResponse | undefined> {
-		const session = await this.debugService.getViewModel().focusedSession;
-		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
-		if (session && stackFrame) {
-			const evaluation = `ad_hoc_alter__a__("${stackFrame.name}")`;
-			const evaluationResult = await session.evaluate(evaluation, stackFrame.frameId);
-			if (evaluationResult) {
-				console.log(evaluationResult);
-				return evaluationResult;
-			}
+	private async ad_hoc_alter_val(session: IDebugSession, stackFrame: IStackFrame): Promise<DebugProtocol.EvaluateResponse | undefined> {
+
+		const evaluation = `ad_hoc_alter__a__("${stackFrame.name}")`;
+		const evaluationResult = await session.evaluate(evaluation, stackFrame.frameId);
+		if (evaluationResult) {
+			console.log(evaluationResult);
+			return evaluationResult;
 		}
 		return undefined;
+	}
+	async synthesize(SyntDictJson: Object, session: IDebugSession, stackFrame: IStackFrame, controller: AbortController) {
+		if (Object.keys(SyntDictJson).length === 0) {//empty object
+			await this.ad_hoc_alter_val(session,stackFrame);
+			const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
+			const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+			SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
+		}
+		await this.sendToSynthesizer(SyntDictJson, controller);
+		return;
 	}
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
@@ -164,14 +171,15 @@ export class DeSyntView extends ViewPane {
 				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 				if (SyntDict) {
-					let SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
-					if (Object.keys(SyntDictJson).length === 0) {//empty object
-						await this.ad_hoc_alter_val();
-						const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
-						SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
-					}
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
+					//if (Object.keys(SyntDictJson).length === 0) {//empty object
+					//	await this.ad_hoc_alter_val();
+					//	const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+					//	SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
+					//}
 					try {
-						await this.sendToSynthesizer(SyntDictJson, controller);
+						await this.synthesize(SyntDictJson, session, stackFrame, controller);
+						//await this.sendToSynthesizer(SyntDictJson, controller);
 					} catch (e) {
 						if (e.message === 'Cancled') {
 							this.notificationSer.info('Cancled');
