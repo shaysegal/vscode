@@ -563,6 +563,12 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
 			this.storageService.store(this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt', value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			oldOnFinish(value, success);
+			// Debug continuation after the user inserts the desired value to fill hole
+			const threadToContinue = this.debugService.getViewModel().focusedThread;
+			if (!threadToContinue) {
+				return;
+			}
+			await threadToContinue.continue();
 		};
 
 		return inputBoxOptions;
