@@ -16,7 +16,7 @@ import { KeyCode } from 'vs/base/common/keyCodes';
 import * as lifecycle from 'vs/base/common/lifecycle';
 import { isMacintosh } from 'vs/base/common/platform';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
-import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition, IMouseTarget, IMouseTargetContentText } from 'vs/editor/browser/editorBrowser';
+import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition, IMouseTarget } from 'vs/editor/browser/editorBrowser';
 import { ConfigurationChangedEvent, EditorOption } from 'vs/editor/common/config/editorOptions';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
@@ -185,7 +185,6 @@ export class DebugHoverWidget implements IContentWidget {
 			if (e.key === 'Enter') {
 				if (e.currentTarget) {
 					if ((e.currentTarget as any).innerText.includes('sketchValue') || (e.currentTarget as any).innerText.includes('overrideValue')) {
-						console.log('here');
 						const doubleClickEvent = new Event('dblclick', {
 							bubbles: true,
 							cancelable: true
@@ -353,8 +352,8 @@ export class DebugHoverWidget implements IContentWidget {
 		this.valueContainer.hidden = true;
 		try {
 			if ((expression as Expression).inDesynt) {
-				let title = '??';
-				let bodyExperssion = expression as Expression;
+				let title = 'Hole';
+				const bodyExperssion = expression as Expression;
 				const hasSolutionExpression = new Expression(`'solution' in ${expression.name}`);
 				await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
 				if (hasSolutionExpression.value === 'True') {
@@ -366,15 +365,19 @@ export class DebugHoverWidget implements IContentWidget {
 					await bodyExperssion.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
 				}
 
-				if ((this.mouseTarget as IMouseTargetContentText).detail?.mightBeForeignElement) {//on decoration
-					bodyExperssion = new Expression(`synt_dict[${this.mouseTarget?.range?.startLineNumber}]`);
-					await bodyExperssion.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
-					this.complexValueTitle.textContent = title;//expression.value;
-					await this.tree.setInput(bodyExperssion);
-				} else {
-					this.complexValueTitle.textContent = title;//'??';
-					await this.tree.setInput(bodyExperssion);
-				}
+				// if ((this.mouseTarget as IMouseTargetContentText).detail?.mightBeForeignElement) {//on decoration
+				// 	console.log("diff");
+				// 	bodyExperssion = new Expression(`synt_dict[${this.mouseTarget?.range?.startLineNumber}]`);
+				// 	await bodyExperssion.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
+				// 	this.complexValueTitle.textContent = title;//expression.value;
+				// 	await this.tree.setInput(bodyExperssion);
+				// } else {
+				// 	this.complexValueTitle.textContent = title;//'??';
+				// 	await this.tree.setInput(bodyExperssion);
+				// }
+
+				this.complexValueTitle.textContent = title;//'??';
+				await this.tree.setInput(bodyExperssion);
 			} else {
 				this.complexValueTitle.textContent = expression.value;
 				await this.tree.setInput(expression);
