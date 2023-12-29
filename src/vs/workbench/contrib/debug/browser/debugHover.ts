@@ -560,18 +560,43 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 		@IStorageService private readonly storageService: IStorageService) {
 		super(linkDetector, menuService, contextKeyService, debugService, contextViewService);
 	}
-	protected override  getInputBoxOptions(expression: IExpression): IInputBoxOptions {
+	// Want to make async somehow
+	protected override getInputBoxOptions(expression: IExpression): IInputBoxOptions {
 		const inputBoxOptions = super.getInputBoxOptions(expression);
 		const oldOnFinish = inputBoxOptions.onFinish;
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
 			this.storageService.store(this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt', value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			oldOnFinish(value, success);
-			// Debug continuation after the user inserts the desired value to fill hole
-			const threadToContinue = this.debugService.getViewModel().focusedThread;
-			if (!threadToContinue) {
-				return;
+
+			// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
+			// Mad ugly, but works
+			const session = await this.debugService.getViewModel().focusedSession;
+			const thread = await this.debugService.getViewModel().focusedThread;
+			const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
+			const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
+
+			const scopes = await stackFrame?.getScopes();
+			const localScope = await scopes!.
+				find(s => s.name === 'Locals')?.
+				getChildren()!;
+			const locals = JSON.stringify(localScope.map(l => l.toString()));
+
+			if (session && stackFrame && wrapperFrame) {
+				const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${stackFrame.range.startLineNumber})`;
+				const setting = await session.evaluate(updateEvaluation, wrapperFrame.frameId);
+				console.log(setting);
+
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
+				const newSyntDict = await session.evaluate(syntDictEvaluation, wrapperFrame.frameId);
+				console.log(JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"')));
 			}
-			await threadToContinue.continue();
+
+			// Debug continuation after the user inserts the desired value to fill hole
+			// const threadToContinue = this.debugService.getViewModel().focusedThread;
+			// if (!threadToContinue) {
+			// 	return;
+			// }
+			// await threadToContinue.();
 		};
 
 		return inputBoxOptions;
