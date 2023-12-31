@@ -60,14 +60,14 @@ def ad_hoc_eval_solution(line_number, localState):
 
 
 # Shouldn't need
-# def ad_hoc_alter__a__(func_name):
-#     stackframe = list(
-#         filter(lambda frame: frame.function == func_name, inspect.stack())
-#     )
-#     if len(stackframe) == 1:
-#         current_frame = stackframe[0]
-#         return alter__a__(current_frame.frame.f_locals, current_frame.lineno)
-#     return None
+def ad_hoc_alter__a__(func_name):
+    stackframe = list(
+        filter(lambda frame: frame.function == func_name, inspect.stack())
+    )
+    if len(stackframe) == 1:
+        current_frame = stackframe[0]
+        return alter__a__(current_frame.frame.f_locals, current_frame.lineno)
+    return None
 
 """ TODO: do this in one part
     -> Then in the 'HoverVariablesRenderer, once the user inputs a sketch value, locals and this value are added as the input and output for the synt_dict via func update_synt_dict
@@ -91,7 +91,7 @@ def get_preserved_local_state(locals_state):
 
 def update_synt_dict(locals_state_json, value, current_line):
     locals_state = convert_json_localstate(locals_state_json) # don't need preserved as we are already given only the preserved local state
-    
+
     if current_line in synt_dict:
         # Grim but works
         if locals_state in synt_dict[current_line]["input"]:

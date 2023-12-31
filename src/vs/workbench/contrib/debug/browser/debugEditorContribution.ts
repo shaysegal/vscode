@@ -860,7 +860,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				}
 				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 			}
-			if (solutionKey in objSyntDict[sketch_line]) {
+			if (objSyntDict[sketch_line] !== undefined && solutionKey in objSyntDict[sketch_line]) {
 				//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
 				const striked = 'overrideValue' in objSyntDict[sketch_line] && objSyntDict[sketch_line]['overrideValue'] !== null;
 				(this.debugService as DebugService).candidateExist.set(!striked);
