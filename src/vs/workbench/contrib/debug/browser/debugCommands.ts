@@ -159,7 +159,7 @@ async function getThreadAndRun(accessor: ServicesAccessor, sessionAndThreadId: C
 		await run(thread);
 	}
 }
-async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThreadId: CallStackContext | unknown, run: (thread: IThread) => Promise<void>): Promise<void> {
+async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThreadId: CallStackContext | unknown, run: (thread: IThread) => Promise<void>, solution?: boolean): Promise<void> {
 	let thread: IThread | undefined;
 	if (isThreadContext(sessionAndThreadId)) {
 		const session = debugService.getModel().getSession(sessionAndThreadId.sessionId);
@@ -184,7 +184,9 @@ async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThre
 	}
 
 	if (thread) {
-		await run(thread);
+		if (!thread.stopped || !solution) {
+			await run(thread);
+		}
 	}
 }
 
@@ -882,7 +884,7 @@ function createLocalDesyntView(accessor: ServicesAccessor): DeSyntView {
 	const notificationService = accessor.get(INotificationService);
 	return new DeSyntView({ id: DESYNT_VIEW_ID, title: 'desyntView' }, contextMenuService, debugService, keybindingService, instantiationService, viewDescriptorService, configurationService, contextKeyService, openerService, themeService, telemetryService, menuService, notificationService);
 }
-async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number) {
+async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number): Promise<boolean | undefined> {
 	const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 	const SyntDict = await session!.evaluate(syntDictEvaluation, stackFrame.frameId);
 	if (SyntDict) {
@@ -894,10 +896,14 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 			return;
 		}
 		if ((new Set(Object.entries(SyntDictJson[lineNumber]['input']).map(key_val_tuple => JSON.stringify(key_val_tuple[1])))).size < minimumUniqueExamples4Triggerless) {
+
+			console.log('Input to synthesiser is: ', Object.entries(SyntDictJson[lineNumber]['input']).map(key_val_tuple => JSON.stringify(key_val_tuple)));
 			return;
 		}
 		await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
+		return true;
 	}
+	return;
 }
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: CONTINUE_ID,
@@ -909,6 +915,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const codeEditor = codeEditorService.getActiveCodeEditor();
 		const debugService = accessor.get(IDebugService);
 		const localDesyntView = createLocalDesyntView(accessor);
+		let solution;
 
 		if (doesTrigger) {
 			await getThreadAndRun(accessor, context, thread => thread.continue());
@@ -920,11 +927,15 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
 			if (currentCodeLine && currentCodeLine.includes('??')) {
 				const session = await debugService.getViewModel().focusedSession;
-				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+				solution = await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
 			}
 		}
+
+		// TODO: If debugsession is going to end and there is a synthesised snippet that has not been accepted, await the accepting or ending of debug session
+		// Need to do this were debug session ends in response to this as have no way of knowing when is the last breakpoint
+
 		//should send to synthersizer if not has a solution
-		await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
+		await getThreadAndRunDesynt(debugService, context, thread => thread.continue(), solution);
 	}
 
 });
@@ -1296,8 +1307,8 @@ async function addSketchBreakpoints(codeEditorModel: ITextModel | null, debugSer
 		const activeFileUri = codeEditorModel.uri;
 		const lines = codeEditorModel.getLinesContent();
 		for (let i = 0; i < lines.length; i++) {
-			if (lines[i].includes("??")) {
-				if (lines[i].includes("#") && lines[i].indexOf("#") < lines[i].indexOf("??")) {
+			if (lines[i].includes('??')) {
+				if (lines[i].includes('#') && lines[i].indexOf('#') < lines[i].indexOf('??')) {
 					continue;
 				}
 				const old_bp_array = await debugService.getModel().getBreakpoints({ uri: activeFileUri, lineNumber: i + 1 });
