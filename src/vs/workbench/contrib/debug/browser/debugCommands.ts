@@ -3,52 +3,52 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as nls from 'vs/nls';
-import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { List } from 'vs/base/browser/ui/list/listWidget';
-import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
-import { IListService } from 'vs/platform/list/browser/listService';
-import { IDebugService, IEnablement, CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, CONTEXT_VARIABLES_FOCUSED, EDITOR_CONTRIBUTION_ID, IDebugEditorContribution, CONTEXT_IN_DEBUG_MODE, CONTEXT_EXPRESSION_SELECTED, IConfig, IStackFrame, IThread, IDebugSession, CONTEXT_DEBUG_STATE, IDebugConfiguration, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, REPL_VIEW_ID, CONTEXT_DEBUGGERS_AVAILABLE, State, getStateLabel, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, VIEWLET_ID, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_REPL, CONTEXT_STEP_INTO_TARGETS_SUPPORTED, DESYNT_VIEW_ID } from 'vs/workbench/contrib/debug/common/debug';
-import { Expression, Variable, Breakpoint, FunctionBreakpoint, DataBreakpoint, Thread } from 'vs/workbench/contrib/debug/common/debugModel';
-import { IExtensionsViewPaneContainer, VIEWLET_ID as EXTENSIONS_VIEWLET_ID } from 'vs/workbench/contrib/extensions/common/extensions';
-import { ICodeEditor, isCodeEditor } from 'vs/editor/browser/editorBrowser';
-import { MenuRegistry, MenuId, Action2, registerAction2, IMenuService } from 'vs/platform/actions/common/actions';
-import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { openBreakpointSource } from 'vs/workbench/contrib/debug/browser/breakpointsView';
-import { INotificationService } from 'vs/platform/notification/common/notification';
-import { InputFocusedContext } from 'vs/platform/contextkey/common/contextkeys';
-import { ServicesAccessor } from 'vs/editor/browser/editorExtensions';
-import { ActiveEditorContext, PanelFocusContext, ResourceContextKey } from 'vs/workbench/common/contextkeys';
-import { CommandsRegistry, ICommandService } from 'vs/platform/commands/common/commands';
-import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfiguration';
-import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IQuickInputService, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
-import { IViewDescriptorService, IViewsService, ViewContainerLocation } from 'vs/workbench/common/views';
+import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { deepClone } from 'vs/base/common/objects';
 import { isWeb, isWindows } from 'vs/base/common/platform';
-import { saveAllBeforeDebugStart } from 'vs/workbench/contrib/debug/common/debugUtils';
-import { IPaneCompositePartService } from 'vs/workbench/services/panecomposite/browser/panecomposite';
-import { showLoadedScriptMenu } from 'vs/workbench/contrib/debug/common/loadedScriptsPicker';
-import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSessionPicker';
-import { TEXT_FILE_EDITOR_ID } from 'vs/workbench/contrib/files/common/files';
-import { ILocalizedString } from 'vs/platform/action/common/action';
+import { ICodeEditor, isCodeEditor } from 'vs/editor/browser/editorBrowser';
+import { ServicesAccessor } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
-import { ITextModel, ValidAnnotatedEditOperation } from 'vs/editor/common/model';
-import { Range } from 'vs/editor/common/core/range';
-import { ModesHoverController } from 'vs/editor/contrib/hover/browser/hover';
 import { Position } from 'vs/editor/common/core/position';
-import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
-import { doesTrigger, minimumUniqueExamples4Triggerless } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
-import { DeSyntView } from 'vs/workbench/contrib/debug/browser/deSyntView';
+import { Range } from 'vs/editor/common/core/range';
+import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
+import { ITextModel, ValidAnnotatedEditOperation } from 'vs/editor/common/model';
+import { ITextResourcePropertiesService } from 'vs/editor/common/services/textResourceConfiguration';
+import { ModesHoverController } from 'vs/editor/contrib/hover/browser/hover';
+import * as nls from 'vs/nls';
+import { ILocalizedString } from 'vs/platform/action/common/action';
+import { Action2, IMenuService, MenuId, MenuRegistry, registerAction2 } from 'vs/platform/actions/common/actions';
+import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
+import { CommandsRegistry, ICommandService } from 'vs/platform/commands/common/commands';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+import { InputFocusedContext } from 'vs/platform/contextkey/common/contextkeys';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
+import { KeybindingWeight, KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
+import { IListService } from 'vs/platform/list/browser/listService';
+import { INotificationService } from 'vs/platform/notification/common/notification';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { IQuickInputService, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { ActiveEditorContext, PanelFocusContext, ResourceContextKey } from 'vs/workbench/common/contextkeys';
+import { IViewDescriptorService, IViewsService, ViewContainerLocation } from 'vs/workbench/common/views';
+import { openBreakpointSource } from 'vs/workbench/contrib/debug/browser/breakpointsView';
+import { doesTrigger, minimumUniqueExamples4Triggerless } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+import { DeSyntView } from 'vs/workbench/contrib/debug/browser/deSyntView';
+import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
+import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSessionPicker';
+import { CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_DEBUGGERS_AVAILABLE, CONTEXT_DEBUG_STATE, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_EXPRESSION_SELECTED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, CONTEXT_IN_DEBUG_MODE, CONTEXT_IN_DEBUG_REPL, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, CONTEXT_STEP_INTO_TARGETS_SUPPORTED, CONTEXT_VARIABLES_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, DESYNT_VIEW_ID, EDITOR_CONTRIBUTION_ID, IConfig, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IEnablement, IStackFrame, IThread, REPL_VIEW_ID, State, VIEWLET_ID, getStateLabel } from 'vs/workbench/contrib/debug/common/debug';
+import { Breakpoint, DataBreakpoint, Expression, FunctionBreakpoint, Thread, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
+import { saveAllBeforeDebugStart } from 'vs/workbench/contrib/debug/common/debugUtils';
+import { showLoadedScriptMenu } from 'vs/workbench/contrib/debug/common/loadedScriptsPicker';
+import { VIEWLET_ID as EXTENSIONS_VIEWLET_ID, IExtensionsViewPaneContainer } from 'vs/workbench/contrib/extensions/common/extensions';
+import { TEXT_FILE_EDITOR_ID } from 'vs/workbench/contrib/files/common/files';
+import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { IPaneCompositePartService } from 'vs/workbench/services/panecomposite/browser/panecomposite';
 
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
@@ -159,7 +159,7 @@ async function getThreadAndRun(accessor: ServicesAccessor, sessionAndThreadId: C
 		await run(thread);
 	}
 }
-async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThreadId: CallStackContext | unknown, run: (thread: IThread) => Promise<void>, solution?: boolean): Promise<void> {
+async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThreadId: CallStackContext | unknown, run: (thread: IThread) => Promise<void>): Promise<void> {
 	let thread: IThread | undefined;
 	if (isThreadContext(sessionAndThreadId)) {
 		const session = debugService.getModel().getSession(sessionAndThreadId.sessionId);
@@ -184,10 +184,9 @@ async function getThreadAndRunDesynt(debugService: IDebugService, sessionAndThre
 	}
 
 	if (thread) {
-		if (!thread.stopped || !solution) {
-			await run(thread);
-		}
+		await run(thread);
 	}
+
 }
 
 
@@ -870,6 +869,7 @@ CommandsRegistry.registerCommand({
 });
 function createLocalDesyntView(accessor: ServicesAccessor): DeSyntView {
 	const debugService = accessor.get(IDebugService);
+	// const editorService = accessor.get(ICodeEditorService);
 	//const commandService = accessor.get(ICommandService);
 	const contextMenuService = accessor.get(IContextMenuService);
 	const keybindingService = accessor.get(IKeybindingService);
@@ -884,7 +884,7 @@ function createLocalDesyntView(accessor: ServicesAccessor): DeSyntView {
 	const notificationService = accessor.get(INotificationService);
 	return new DeSyntView({ id: DESYNT_VIEW_ID, title: 'desyntView' }, contextMenuService, debugService, keybindingService, instantiationService, viewDescriptorService, configurationService, contextKeyService, openerService, themeService, telemetryService, menuService, notificationService);
 }
-async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number): Promise<boolean | undefined> {
+async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number) {
 	const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 	const SyntDict = await session!.evaluate(syntDictEvaluation, stackFrame.frameId);
 	if (SyntDict) {
@@ -901,10 +901,9 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 			return;
 		}
 		await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
-		return true;
 	}
-	return;
 }
+
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: CONTINUE_ID,
 	weight: KeybindingWeight.WorkbenchContrib + 10, // Use a stronger weight to get priority over start debugging F5 shortcut
@@ -915,7 +914,6 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const codeEditor = codeEditorService.getActiveCodeEditor();
 		const debugService = accessor.get(IDebugService);
 		const localDesyntView = createLocalDesyntView(accessor);
-		let solution;
 
 		if (doesTrigger) {
 			await getThreadAndRun(accessor, context, thread => thread.continue());
@@ -927,15 +925,15 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
 			if (currentCodeLine && currentCodeLine.includes('??')) {
 				const session = await debugService.getViewModel().focusedSession;
-				solution = await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+				// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+				// TOODO: Leads to error for desynt synthesis
+				if (localDesyntView.solution) {
+					await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
+				}
 			}
 		}
-
-		// TODO: If debugsession is going to end and there is a synthesised snippet that has not been accepted, await the accepting or ending of debug session
-		// Need to do this were debug session ends in response to this as have no way of knowing when is the last breakpoint
-
-		//should send to synthersizer if not has a solution
-		await getThreadAndRunDesynt(debugService, context, thread => thread.continue(), solution);
+		await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 	}
 
 });
