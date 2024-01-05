@@ -3,42 +3,43 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IDragAndDropData } from 'vs/base/browser/dnd';
+import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
+import { Button } from 'vs/base/browser/ui/button/button';
+import { IHighlight } from 'vs/base/browser/ui/highlightedlabel/highlightedLabel';
+import { IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
+import { ElementsDragAndDropData } from 'vs/base/browser/ui/list/listView';
+import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
+import { IAsyncDataSource, ITreeContextMenuEvent, ITreeDragAndDrop, ITreeDragOverReaction, ITreeMouseEvent } from 'vs/base/browser/ui/tree/tree';
+import { IAction } from 'vs/base/common/actions';
 import { RunOnceScheduler } from 'vs/base/common/async';
-import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { IDebugService, IExpression, CONTEXT_WATCH_ITEM_TYPE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_CAN_VIEW_MEMORY, DESYNT_VIEW_ID, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_IN_DEBUG_MODE, IDebugSession, IStackFrame } from 'vs/workbench/contrib/debug/common/debug';
-import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
+import { Codicon } from 'vs/base/common/codicons';
+import { FuzzyScore } from 'vs/base/common/filters';
+import { localize } from 'vs/nls';
+import { createAndFillInContextMenuActions } from 'vs/platform/actions/browser/menuEntryActionViewItem';
+import { Action2, IMenu, IMenuService, MenuId, registerAction2 } from 'vs/platform/actions/common/actions';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { ContextKeyExpr, IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { IAction } from 'vs/base/common/actions';
-import { renderExpressionValue, renderViewTree, IInputBoxOptions, AbstractExpressionsRenderer, IExpressionTemplateData } from 'vs/workbench/contrib/debug/browser/baseDebugView';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { ViewPane, ViewAction } from 'vs/workbench/browser/parts/views/viewPane';
-import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
-import { IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
-import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
 import { WorkbenchAsyncDataTree } from 'vs/platform/list/browser/listService';
-import { IAsyncDataSource, ITreeMouseEvent, ITreeContextMenuEvent, ITreeDragAndDrop, ITreeDragOverReaction } from 'vs/base/browser/ui/tree/tree';
-import { IDragAndDropData } from 'vs/base/browser/dnd';
-import { ElementsDragAndDropData } from 'vs/base/browser/ui/list/listView';
-import { FuzzyScore } from 'vs/base/common/filters';
-import { IHighlight } from 'vs/base/browser/ui/highlightedlabel/highlightedLabel';
-import { VariablesRenderer, updateForgetScopes, } from 'vs/workbench/contrib/debug/browser/variablesView';
-import { IContextKeyService, ContextKeyExpr, IContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { IViewDescriptorService } from 'vs/workbench/common/views';
-import { IOpenerService } from 'vs/platform/opener/common/opener';
-import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { watchExpressionsRemoveAll, watchExpressionsAdd } from 'vs/workbench/contrib/debug/browser/debugIcons';
-import { registerAction2, MenuId, Action2, IMenuService, IMenu } from 'vs/platform/actions/common/actions';
-import { localize } from 'vs/nls';
-import { Codicon } from 'vs/base/common/codicons';
-import { createAndFillInContextMenuActions } from 'vs/platform/actions/browser/menuEntryActionViewItem';
-import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
-import { Button } from 'vs/base/browser/ui/button/button';
-import { defaultButtonStyles } from 'vs/platform/theme/browser/defaultStyles';
 import { INotificationService } from 'vs/platform/notification/common/notification';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { defaultButtonStyles } from 'vs/platform/theme/browser/defaultStyles';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { ViewAction, ViewPane } from 'vs/workbench/browser/parts/views/viewPane';
+import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
+import { IViewDescriptorService } from 'vs/workbench/common/views';
+import { AbstractExpressionsRenderer, IExpressionTemplateData, IInputBoxOptions, renderExpressionValue, renderViewTree } from 'vs/workbench/contrib/debug/browser/baseDebugView';
 import { SynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, SythesisRequestRoute } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+import { watchExpressionsAdd, watchExpressionsRemoveAll } from 'vs/workbench/contrib/debug/browser/debugIcons';
+import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
+import { VariablesRenderer, updateForgetScopes, } from 'vs/workbench/contrib/debug/browser/variablesView';
+import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugService, IDebugSession, IExpression, IStackFrame } from 'vs/workbench/contrib/debug/common/debug';
+import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
+// import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
 import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { KeybindingWeight, KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
@@ -60,10 +61,11 @@ export class DeSyntView extends ViewPane {
 	private variableReadonly: IContextKey<boolean>;
 	private menu: IMenu;
 	private notificationSer: INotificationService;
-	//private editorService: ICodeEditorService;
+	// private editorService: ICodeEditorService;
+	solution: boolean;
 	constructor(
 		options: IViewletViewOptions,
-		//@ICodeEditorService editorService: ICodeEditorService,
+		// @ICodeEditorService editorService: ICodeEditorService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IDebugService private readonly debugService: IDebugService,
 		@IKeybindingService keybindingService: IKeybindingService,
@@ -78,6 +80,7 @@ export class DeSyntView extends ViewPane {
 		@INotificationService notificationService: INotificationService,
 	) {
 		super(options, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, telemetryService);
+		this.solution = false;
 		this.notificationSer = notificationService;
 		this.menu = menuService.createMenu(MenuId.DebugWatchContext, contextKeyService);
 		this._register(this.menu);
@@ -86,7 +89,7 @@ export class DeSyntView extends ViewPane {
 			this.tree.updateChildren();
 		}, 50);
 
-		//this.editorService = editorService;
+		// this.editorService = editorService;
 		this.watchExpressionsExist = CONTEXT_DESYNT_EXIST.bindTo(contextKeyService);
 		this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
 		this.variableReadonly = CONTEXT_VARIABLE_IS_READONLY.bindTo(contextKeyService);
@@ -106,7 +109,7 @@ export class DeSyntView extends ViewPane {
 	}
 	async synthesize(SyntDictJson: Object, session: IDebugSession, stackFrame: IStackFrame, controller: AbortController) {
 		if (Object.keys(SyntDictJson).length === 0) {//empty object
-			await this.ad_hoc_alter_val(session,stackFrame);
+			await this.ad_hoc_alter_val(session, stackFrame);
 			const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 			const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
@@ -171,7 +174,8 @@ export class DeSyntView extends ViewPane {
 				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 				if (SyntDict) {
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
+					// const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 					//if (Object.keys(SyntDictJson).length === 0) {//empty object
 					//	await this.ad_hoc_alter_val();
 					//	const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
@@ -369,6 +373,7 @@ export class DeSyntView extends ViewPane {
 		console.log(json);
 
 		if (json.program) {
+			this.solution = true;
 			const programDetails = json.program;
 			//const pattern = '??';
 			this.candidateExist.set(true);
