@@ -39,6 +39,8 @@ export interface IStorageService {
 
 	readonly _serviceBrand: undefined;
 
+	desyntIteration: number;
+
 	/**
 	 * Emitted whenever data is updated or deleted.
 	 */
@@ -254,6 +256,8 @@ export function loadKeyTargets(storage: IStorage): IKeyTargets {
 export abstract class AbstractStorageService extends Disposable implements IStorageService {
 
 	declare readonly _serviceBrand: undefined;
+
+	desyntIteration: number = 1;
 
 	private static DEFAULT_FLUSH_INTERVAL = 60 * 1000; // every minute
 

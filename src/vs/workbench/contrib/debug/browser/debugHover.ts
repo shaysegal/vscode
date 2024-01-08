@@ -551,6 +551,7 @@ class DebugHoverComputer {
 		return undefined;
 	}
 }
+
 export class HoverVariablesRenderer extends VariablesRenderer {
 	constructor(linkDetector: LinkDetector,
 		@IMenuService menuService: IMenuService,
@@ -560,12 +561,14 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 		@IStorageService private readonly storageService: IStorageService) {
 		super(linkDetector, menuService, contextKeyService, debugService, contextViewService);
 	}
-	// Want to make async somehow
 	protected override getInputBoxOptions(expression: IExpression): IInputBoxOptions {
 		const inputBoxOptions = super.getInputBoxOptions(expression);
 		const oldOnFinish = inputBoxOptions.onFinish;
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
-			this.storageService.store(this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt', value, StorageScope.PROFILE, StorageTarget.MACHINE);
+
+			// TODO: Need to notify if at new iteration
+			// Crap solution done by adding desytniteration to storage
+			this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			oldOnFinish(value, success);
 
 			// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
@@ -583,12 +586,7 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 
 			if (session && stackFrame && wrapperFrame) {
 				const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${stackFrame.range.startLineNumber})`;
-				const setting = await session.evaluate(updateEvaluation, wrapperFrame.frameId);
-				console.log(setting);
-
-				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
-				const newSyntDict = await session.evaluate(syntDictEvaluation, wrapperFrame.frameId);
-				console.log(JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"')));
+				await session.evaluate(updateEvaluation, wrapperFrame.frameId);
 			}
 
 			// Debug continuation after the user inserts the desired value to fill hole

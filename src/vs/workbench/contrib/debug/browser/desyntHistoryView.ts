@@ -421,15 +421,15 @@ interface IViewState {
 /**
  * This maps a model item into a view model item.
  */
-function asTreeElement(item: BaseTreeItem, viewState?: IViewState): ITreeElement<DesyntHistoryItem> {
+function asTreeElement(item: BaseTreeItem, viewState?: IViewState, iteration?: string): ITreeElement<DesyntHistoryItem> {
 	const children = item.getChildren();
-	const collapsed = viewState ? !viewState.expanded.has(item.getId()) : !(item instanceof SessionTreeItem);
+	const collapsed = viewState ? !viewState.expanded.has(item.getId()) : !(item instanceof SessionTreeItem) && !(iteration === item.getId());
 
 	return {
 		element: item,
 		collapsed,
 		collapsible: item.hasChildren(),
-		children: children.map(i => asTreeElement(i, viewState))
+		children: children.map(i => asTreeElement(i, viewState, iteration))
 	};
 }
 
@@ -510,7 +510,7 @@ export class DesyntHistoryView extends ViewPane {
 			}
 		);
 
-		const updateView = (viewState?: IViewState) => this.tree.setChildren(null, asTreeElement(root, viewState).children);
+		const updateView = (viewState?: IViewState) => this.tree.setChildren(null, asTreeElement(root, viewState, 'iteration ' + this.keyIteration.toString()).children);
 
 		updateView();
 
@@ -566,6 +566,7 @@ export class DesyntHistoryView extends ViewPane {
 					this.keyRunningNumber = 0;
 					if (root.getChild(this.keyIteration.toString())) {
 						this.keyIteration += 1;
+						this.storageService.desyntIteration += 1; // rough
 					}
 				}
 				if (e === State.Inactive || e === State.Initializing) {
@@ -577,7 +578,10 @@ export class DesyntHistoryView extends ViewPane {
 			}
 			));
 			this._register(this.storageService.onDidChangeValue(async e => {
-				const desired_key = this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt';
+				// TODO: Currently won't work between iterations with the same value
+				// Done by changing the storagaeService to also hold to keyiteration so it can be accessed from the hover widget
+				// its crap
+				const desired_key = (this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString();
 				if (e.key === desired_key) {
 					const value = this.storageService.get(desired_key, StorageScope.APPLICATION);
 					if (e.target === StorageTarget.MACHINE && e.scope === StorageScope.APPLICATION && value) {
