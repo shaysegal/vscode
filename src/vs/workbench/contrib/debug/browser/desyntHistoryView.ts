@@ -3,44 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as nls from 'vs/nls';
-import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { normalize, isAbsolute, posix } from 'vs/base/common/path';
-import { ViewPane } from 'vs/workbench/browser/parts/views/viewPane';
-import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { renderViewTree } from 'vs/workbench/contrib/debug/browser/baseDebugView';
-import { IDebugSession, IDebugService, CONTEXT_DESYNT_HISTORY_ITEM_TYPE, State, } from 'vs/workbench/contrib/debug/common/debug';
-import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
-import { IWorkspaceContextService, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
-import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { normalizeDriveLetter, tildify } from 'vs/base/common/labels';
-import { isWindows } from 'vs/base/common/platform';
-import { URI } from 'vs/base/common/uri';
-import { ltrim } from 'vs/base/common/strings';
-import { RunOnceScheduler } from 'vs/base/common/async';
-import { ResourceLabels, IResourceLabelProps, IResourceLabelOptions, IResourceLabel } from 'vs/workbench/browser/labels';
-import { FileKind } from 'vs/platform/files/common/files';
 import { IListVirtualDelegate } from 'vs/base/browser/ui/list/list';
-import { ITreeNode, ITreeFilter, TreeVisibility, TreeFilterResult, ITreeElement, ITreeMouseEvent } from 'vs/base/browser/ui/tree/tree';
 import { IListAccessibilityProvider } from 'vs/base/browser/ui/list/listWidget';
-import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { WorkbenchCompressibleObjectTree } from 'vs/platform/list/browser/listService';
-import { dispose } from 'vs/base/common/lifecycle';
-import { createMatches, FuzzyScore } from 'vs/base/common/filters';
-import { DebugContentProvider } from 'vs/workbench/contrib/debug/common/debugContentProvider';
-import { ILabelService } from 'vs/platform/label/common/label';
+import { TreeFindMode } from 'vs/base/browser/ui/tree/abstractTree';
 import type { ICompressedTreeNode } from 'vs/base/browser/ui/tree/compressedObjectTreeModel';
 import type { ICompressibleTreeRenderer } from 'vs/base/browser/ui/tree/objectTree';
-import { IViewDescriptorService } from 'vs/workbench/common/views';
+import { ITreeElement, ITreeFilter, ITreeMouseEvent, ITreeNode, TreeFilterResult, TreeVisibility } from 'vs/base/browser/ui/tree/tree';
+import { RunOnceScheduler } from 'vs/base/common/async';
+import { FuzzyScore, createMatches } from 'vs/base/common/filters';
+import { normalizeDriveLetter, tildify } from 'vs/base/common/labels';
+import { dispose } from 'vs/base/common/lifecycle';
+import { isAbsolute, normalize, posix } from 'vs/base/common/path';
+import { isWindows } from 'vs/base/common/platform';
+import { ltrim } from 'vs/base/common/strings';
+import { URI } from 'vs/base/common/uri';
+import * as nls from 'vs/nls';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
+import { FileKind } from 'vs/platform/files/common/files';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
+import { ILabelService } from 'vs/platform/label/common/label';
+import { WorkbenchCompressibleObjectTree } from 'vs/platform/list/browser/listService';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
-import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IPathService } from 'vs/workbench/services/path/common/pathService';
-import { TreeFindMode } from 'vs/base/browser/ui/tree/abstractTree';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { IWorkspaceContextService, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
+import { IResourceLabel, IResourceLabelOptions, IResourceLabelProps, ResourceLabels } from 'vs/workbench/browser/labels';
+import { ViewPane } from 'vs/workbench/browser/parts/views/viewPane';
+import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
+import { IViewDescriptorService } from 'vs/workbench/common/views';
+import { renderViewTree } from 'vs/workbench/contrib/debug/browser/baseDebugView';
+import { CONTEXT_DESYNT_HISTORY_ITEM_TYPE, IDebugService, IDebugSession, State, } from 'vs/workbench/contrib/debug/common/debug';
+import { DebugContentProvider } from 'vs/workbench/contrib/debug/common/debugContentProvider';
+import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
+import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { IPathService } from 'vs/workbench/services/path/common/pathService';
 
 const NEW_STYLE_COMPRESS = true;
 
@@ -705,7 +705,7 @@ export class DesyntHistoryView extends ViewPane {
 		}
 
 		currentParentItem.createIfNeeded(key, () => new DesyntHistoryTreeItem(currentParentItem, 'set sketch value to: ' + value));
-		this.keyRunningNumber += 1;
+		// this.keyRunningNumber += 1; // Commented to to have new sketch values replace previous ones instead of accumulating sketches
 	}
 
 	protected override layoutBody(height: number, width: number): void {
