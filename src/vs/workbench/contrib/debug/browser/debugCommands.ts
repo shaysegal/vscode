@@ -37,7 +37,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ActiveEditorContext, PanelFocusContext, ResourceContextKey } from 'vs/workbench/common/contextkeys';
 import { IViewDescriptorService, IViewsService, ViewContainerLocation } from 'vs/workbench/common/views';
 import { openBreakpointSource } from 'vs/workbench/contrib/debug/browser/breakpointsView';
-import { doesTrigger, minimumUniqueExamples4Triggerless } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+import { doesTrigger, minimumUniqueExamples4Triggerless, triggerlessExtraBreakpoint } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { DeSyntView } from 'vs/workbench/contrib/debug/browser/deSyntView';
 import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
 import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSessionPicker';
@@ -928,7 +928,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
 				// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
 				// TOODO: Leads to error for desynt synthesis
-				if (localDesyntView.solution) {
+				if (localDesyntView.solution && triggerlessExtraBreakpoint) {
 					await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
 				}
 			}
