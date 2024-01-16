@@ -29,7 +29,7 @@ import { Range } from 'vs/editor/common/core/range';
 import { DEFAULT_WORD_REGEXP } from 'vs/editor/common/core/wordHelper';
 import { StandardTokenType } from 'vs/editor/common/encodedTokenAttributes';
 import { InlineValueContext } from 'vs/editor/common/languages';
-import { IModelDeltaDecoration, ITextModel, InjectedTextCursorStops } from 'vs/editor/common/model';
+import { IModelDeltaDecoration, ITextModel, InjectedTextCursorStops, ValidAnnotatedEditOperation } from 'vs/editor/common/model';
 import { IFeatureDebounceInformation, ILanguageFeatureDebounceService } from 'vs/editor/common/services/languageFeatureDebounce';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
 import { ModesHoverController } from 'vs/editor/contrib/hover/browser/hover';
@@ -862,14 +862,35 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			if (current_range.containsPosition(new Position(sketch_line, 1))) {
 				const futureValue = await this.getDesyntFutureValue(sketch_line);
 				if (objSyntDict[sketch_line].hasOwnProperty(solutionKey) && futureValue && futureValue.body && futureValue.body.result) {
-					const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
-					allDecorations.push(...futureDecoration);
+					// const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
+					// allDecorations.push(...futureDecoration);
+
+					this.createFutureValuesComment(sketch_line, futureValue);
 				}
 				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 			}
 		}
 		return;
 	}
+
+	// TODO: remove after exiting debug session
+	private createFutureValuesComment(lineNumber: number, futureValue: DebugProtocol.EvaluateResponse) {
+		const codeEditorModel = this.editor.getModel();
+		const pattern = '??';
+		const futureValComment = `# ${futureValue.body.result}`;
+		if (codeEditorModel) {
+			const lines = codeEditorModel.getLinesContent();
+			const relevantLine = lines[lineNumber - 1];
+			const patternPosition = relevantLine.indexOf(pattern);
+			const range = new Range(lineNumber, patternPosition + pattern.length + 2, lineNumber, patternPosition + pattern.length + 2);
+			if (!relevantLine.includes(futureValComment)) { // this is  hack
+				codeEditorModel.applyEdits([
+					new ValidAnnotatedEditOperation(null, range, futureValComment, false, false, false)
+				]);
+			}
+		}
+	}
+
 	private async getDesyntFutureValue(line_number: number): Promise<DebugProtocol.EvaluateResponse | undefined> {
 		const session = await this.debugService.getViewModel().focusedSession;
 		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
