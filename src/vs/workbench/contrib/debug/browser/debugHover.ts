@@ -356,6 +356,8 @@ export class DebugHoverWidget implements IContentWidget {
 				const bodyExperssion = expression as Expression;
 				const hasSolutionExpression = new Expression(`'solution' in ${expression.name}`);
 				await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
+
+				// Given removal of if solution condition in createExpressionStringForSketch, this code is no longer reached
 				if (hasSolutionExpression.value === 'True') {
 					const solutionExpression = new Expression(`${expression.name}['solution']`);
 					await solutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
@@ -519,9 +521,9 @@ class DebugHoverComputer {
 		const experssion = `synt_dict[${lineNumber}]`;
 		const hasSolutionExpression = new Expression(`'solution' in ${experssion}`);
 		await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
-		if (hasSolutionExpression.value === 'True') {
-			return experssion;
-		}
+		// if (hasSolutionExpression.value === 'True') {
+		// 	return experssion;
+		// }
 		return `sketchValueContainer`;
 	}
 	async evaluate(session: IDebugSession): Promise<IExpression | undefined> {
