@@ -15,7 +15,7 @@ import { Event } from 'vs/base/common/event';
 import { visit } from 'vs/base/common/json';
 import { setProperty } from 'vs/base/common/jsonEdit';
 import { KeyCode } from 'vs/base/common/keyCodes';
-import { dispose, IDisposable } from 'vs/base/common/lifecycle';
+import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { basename } from 'vs/base/common/path';
 import * as env from 'vs/base/common/platform';
 import * as strings from 'vs/base/common/strings';
@@ -29,7 +29,7 @@ import { Range } from 'vs/editor/common/core/range';
 import { DEFAULT_WORD_REGEXP } from 'vs/editor/common/core/wordHelper';
 import { StandardTokenType } from 'vs/editor/common/encodedTokenAttributes';
 import { InlineValueContext } from 'vs/editor/common/languages';
-import { IModelDeltaDecoration, InjectedTextCursorStops, ITextModel } from 'vs/editor/common/model';
+import { IModelDeltaDecoration, ITextModel, InjectedTextCursorStops } from 'vs/editor/common/model';
 import { IFeatureDebounceInformation, ILanguageFeatureDebounceService } from 'vs/editor/common/services/languageFeatureDebounce';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
 import { ModesHoverController } from 'vs/editor/contrib/hover/browser/hover';
@@ -823,7 +823,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		this.oldDecorations.set(allDecorations);
 	}
 	private async addDesyntInsightToDecorations(SyntDict: DebugProtocol.EvaluateResponse, allDecorations: IModelDeltaDecoration[], current_range: Range): Promise<void> {
-		const solutionKey = "solution";
+		const solutionKey = 'solution';
 		const allDecorationsLineAndColumn = allDecorations.map(decoration => {
 			return { line: decoration.range.startLineNumber, column: decoration.range.startColumn, type: decoration.options.description };
 		}).filter(decoration => decoration.type === 'debug-inline-value-decoration');
@@ -854,7 +854,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			const sketch_line = current_range.startLineNumber;
 			if (current_range.containsPosition(new Position(sketch_line, 1))) {
 				const futureValue = await this.getDesyntFutureValue(sketch_line);
-				if (futureValue && futureValue.body && futureValue.body.result) {
+				if (objSyntDict[sketch_line].hasOwnProperty(solutionKey) && futureValue && futureValue.body && futureValue.body.result) {
 					const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
 					allDecorations.push(...futureDecoration);
 				}
