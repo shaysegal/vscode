@@ -832,6 +832,13 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			if (decoration.line in SyntDict) {
 				found = true;
 				const objSyntDict = SyntDict as any;
+				if (objSyntDict[decoration.line] && solutionKey in objSyntDict[decoration.line]) {
+					//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
+					const striked = 'overrideValue' in objSyntDict[decoration.line] && objSyntDict[decoration.line]['overrideValue'] !== null;
+					(this.debugService as DebugService).candidateExist.set(!striked);
+					const desyntDecoration = createInlineValueDecorationDesynt(decoration.line, objSyntDict[decoration.line][solutionKey], striked);
+					allDecorations.push(...desyntDecoration);
+				}
 				if (current_range.containsPosition(new Position(decoration.line, 1))) {
 					const futureValue = await this.getDesyntFutureValue(decoration.line);
 					if (futureValue && futureValue.body && futureValue.body.result) {
@@ -839,13 +846,6 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 						allDecorations.push(...futureDecoration);
 					}
 					allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
-				}
-				if (objSyntDict[decoration.line] && solutionKey in objSyntDict[decoration.line]) {
-					//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
-					const striked = 'overrideValue' in objSyntDict[decoration.line] && objSyntDict[decoration.line]['overrideValue'] !== null;
-					(this.debugService as DebugService).candidateExist.set(!striked);
-					const desyntDecoration = createInlineValueDecorationDesynt(decoration.line, objSyntDict[decoration.line][solutionKey], striked);
-					allDecorations.push(...desyntDecoration);
 				}
 			}
 		}
