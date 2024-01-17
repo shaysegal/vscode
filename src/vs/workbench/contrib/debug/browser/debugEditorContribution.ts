@@ -877,15 +877,16 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private createFutureValuesComment(lineNumber: number, futureValue: DebugProtocol.EvaluateResponse) {
 		const codeEditorModel = this.editor.getModel();
 		const pattern = '??';
-		const futureValComment = `# ${futureValue.body.result}`;
+		const futureValComment = `# Suggested value: ${futureValue.body.result}`;
 		if (codeEditorModel) {
 			const lines = codeEditorModel.getLinesContent();
 			const relevantLine = lines[lineNumber - 1];
 			const patternPosition = relevantLine.indexOf(pattern);
-			const range = new Range(lineNumber, patternPosition + pattern.length + 2, lineNumber, patternPosition + pattern.length + 2);
-			if (!relevantLine.includes(futureValComment)) { // this is  hack
+			const range = new Range(lineNumber, patternPosition + pattern.length + 1, lineNumber, patternPosition + pattern.length + 1);
+			if (!lines[lineNumber].includes(futureValComment)) { // this is  hack, use linenumber as comment is on next line, below (\n)
+				const indent = relevantLine.search(/\S/);
 				codeEditorModel.applyEdits([
-					new ValidAnnotatedEditOperation(null, range, futureValComment, false, false, false)
+					new ValidAnnotatedEditOperation(null, range, `\n${' '.repeat(indent)}${futureValComment}`, false, false, false)
 				]);
 			}
 		}
