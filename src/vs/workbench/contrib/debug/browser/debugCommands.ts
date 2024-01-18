@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { deepClone } from 'vs/base/common/objects';
@@ -31,6 +30,7 @@ import { KeybindingWeight, KeybindingsRegistry } from 'vs/platform/keybinding/co
 import { IListService } from 'vs/platform/list/browser/listService';
 import { INotificationService } from 'vs/platform/notification/common/notification';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { IProgressService, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { IQuickInputService, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -882,7 +882,8 @@ function createLocalDesyntView(accessor: ServicesAccessor): DeSyntView {
 	const telemetryService = accessor.get(ITelemetryService);
 	const menuService = accessor.get(IMenuService);
 	const notificationService = accessor.get(INotificationService);
-	return new DeSyntView({ id: DESYNT_VIEW_ID, title: 'desyntView' }, contextMenuService, debugService, keybindingService, instantiationService, viewDescriptorService, configurationService, contextKeyService, openerService, themeService, telemetryService, menuService, notificationService);
+	const progressService = accessor.get(IProgressService);
+	return new DeSyntView({ id: DESYNT_VIEW_ID, title: 'desyntView' }, contextMenuService, debugService, keybindingService, instantiationService, viewDescriptorService, configurationService, contextKeyService, openerService, themeService, telemetryService, menuService, notificationService, progressService);
 }
 async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number) {
 	const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
@@ -900,7 +901,17 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 			console.log('Input to synthesiser is: ', Object.entries(SyntDictJson[lineNumber]['input']).map(key_val_tuple => JSON.stringify(key_val_tuple)));
 			return;
 		}
-		await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
+
+		localDesyntView.progressSer.withProgress({
+			location: ProgressLocation.Notification,
+			delay: 750,
+			title: nls.localize('synthesizingSketch', "Running synthesizer..."),
+			cancellable: true,
+		}, async () => { // task
+			return await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
+		}, () => { //on cancel
+			//TODO return localDesyntView.cancelSynthesis();
+		});
 	}
 }
 

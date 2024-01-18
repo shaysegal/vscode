@@ -43,6 +43,7 @@ import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugMod
 
 import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { KeybindingWeight, KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
+import { IProgressService } from 'vs/platform/progress/common/progress';
 
 
 
@@ -61,6 +62,7 @@ export class DeSyntView extends ViewPane {
 	private variableReadonly: IContextKey<boolean>;
 	private menu: IMenu;
 	private notificationSer: INotificationService;
+	progressSer: IProgressService;
 	// private editorService: ICodeEditorService;
 	solution: boolean;
 	constructor(
@@ -78,10 +80,12 @@ export class DeSyntView extends ViewPane {
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IMenuService menuService: IMenuService,
 		@INotificationService notificationService: INotificationService,
+		@IProgressService progressService: IProgressService,
 	) {
 		super(options, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, telemetryService);
 		this.solution = false;
 		this.notificationSer = notificationService;
+		this.progressSer = progressService;
 		this.menu = menuService.createMenu(MenuId.DebugWatchContext, contextKeyService);
 		this._register(this.menu);
 		this.watchExpressionsUpdatedScheduler = new RunOnceScheduler(() => {
