@@ -42,6 +42,7 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
 import { FloatingClickWidget } from 'vs/workbench/browser/codeeditor';
+import { suggestedValueAsComment, suggestedValueInline } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
@@ -862,10 +863,14 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			if (current_range.containsPosition(new Position(sketch_line, 1))) {
 				const futureValue = await this.getDesyntFutureValue(sketch_line);
 				if (objSyntDict[sketch_line].hasOwnProperty(solutionKey) && futureValue && futureValue.body && futureValue.body.result) {
-					// const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
-					// allDecorations.push(...futureDecoration);
 
-					this.createFutureValuesComment(sketch_line, futureValue);
+					if (suggestedValueAsComment) {
+						this.createSuggestedValuesComment(sketch_line, futureValue);
+					} else if (suggestedValueInline) {
+						const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
+						allDecorations.push(...futureDecoration);
+
+					}
 				}
 				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 			}
@@ -874,7 +879,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	}
 
 	// TODO: remove after exiting debug session
-	private createFutureValuesComment(lineNumber: number, futureValue: DebugProtocol.EvaluateResponse) {
+	private createSuggestedValuesComment(lineNumber: number, futureValue: DebugProtocol.EvaluateResponse) {
 		const codeEditorModel = this.editor.getModel();
 		const pattern = '??';
 		const futureValComment = `# Suggested value: ${futureValue.body.result}`;

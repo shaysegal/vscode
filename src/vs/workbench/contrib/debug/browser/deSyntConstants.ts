@@ -7,7 +7,9 @@ export const SythesizerCleanRequestRoute = 'clear_state';
 export const SynthesisTimeoutInMiliSeconds = 40000;  //40 seconds
 export const RestartSynthesisTimeoutInMiliSeconds = 3000;  //3 seconds
 export const doesTrigger = false;  //run synthersizer in the background always or by user request [true = then triggered, false = triggerless]
-export const minimumUniqueExamples4Triggerless = 2;
+export const minimumUniqueExamples4Triggerless = 1;
 
 // Design Parameters
 export const triggerlessExtraBreakpoint = false;
+export const suggestedValueAsComment = false;
+export const suggestedValueInline = false;

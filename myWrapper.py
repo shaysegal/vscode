@@ -15,12 +15,14 @@ based on img-summary.py
 
 class Sketch:
     def __init__(self):
-        self.sketchValue = None
+        self.sketchValue = None 
+        self.suggestedValue = None # To have suggeted value in the sketch hover widget
 
-    def update_synt_dict(self, localState, frameinfo):
-        print("local state", localState)
-        print("frame info", frameinfo)
-        alter__a__(frameinfo)
+    # Not used
+    # def update_synt_dict(self, localState, frameinfo, global_state):
+    #     print("local state", localState)
+    #     print("frame info", frameinfo)
+    #     alter__a__(frameinfo.lineno, localState, global_state)
 
 
 # bdb explained https://docs.google.com/presentation/d/1rBhLdD4VIUkfZ9UlSADjqPPuBeWdMXjjgDgkW2nnDMs/edit#slide=id.g4b85415bca_0_5
@@ -54,19 +56,20 @@ def ad_hoc_eval_solution(line_number, localState):
             return synt_dict[line_number]["overrideValue"]
         if "solution" in synt_dict[line_number]:
             output = eval(synt_dict[line_number]["solution"], localState)
+            sketchValueContainer.suggestedValue = output
             return output
 
     return sketchValueContainer.sketchValue
 
 
-# Shouldn't need
+# What does this do?
 def ad_hoc_alter__a__(func_name):
     stackframe = list(
         filter(lambda frame: frame.function == func_name, inspect.stack())
     )
     if len(stackframe) == 1:
         current_frame = stackframe[0]
-        return alter__a__(current_frame.frame.f_locals, current_frame.lineno)
+        return alter__a__(current_frame.lineno, current_frame.frame.f_locals, current_frame.frame.f_globals)
     return None
 
 """ TODO: do this in one part
@@ -91,7 +94,7 @@ def get_preserved_local_state(locals_state):
 
 def update_synt_dict(locals_state_json, value, current_line):
     locals_state = convert_json_localstate(locals_state_json) # don't need preserved as we are already given only the preserved local state
-
+    
     if current_line in synt_dict:
         # Grim but works
         if locals_state in synt_dict[current_line]["input"]:
@@ -112,6 +115,7 @@ def update_synt_dict(locals_state_json, value, current_line):
             "output": [value],
         }
 
+# What does this do??
 def try_get_solution(locals_state, globals_state, current_line):
     preserved_local_state = get_preserved_local_state(locals_state)
     try:
@@ -123,8 +127,8 @@ def try_get_solution(locals_state, globals_state, current_line):
             globals_state,
         )
         # would like to save it for future need of synthesizing
-        synt_dict[current_line]["input"].append(preserved_local_state)
-        synt_dict[current_line]["output"].append(output)
+        # synt_dict[current_line]["input"].append(preserved_local_state)
+        # synt_dict[current_line]["output"].append(output)
 
         return output
     except Exception as e:
@@ -135,9 +139,9 @@ def try_get_solution(locals_state, globals_state, current_line):
             e,
         )
 
-def alter__a__(current_line):
+def alter__a__(current_line, locals_state, globals_state):
     if "solution" in synt_dict[current_line]:
-        return try_get_solution(locals(), globals(), current_line)
+            return try_get_solution(locals_state, globals_state, current_line)
 
     if sketchValueContainer.sketchValue is None:
         raise RuntimeError("no sketch value ... can't contiue")
@@ -180,7 +184,7 @@ def _get_code_from_file(run_name, path_name):
         altered_code = str.encode(
             f.read()
             .decode("utf-8")
-            .replace("??", "alter__a__(inspect.currentframe().f_lineno)")
+            .replace("??", "alter__a__(inspect.currentframe().f_lineno, inspect.currentframe().f_locals, inspect.currentframe().f_globals)")
         )
         code = compile(altered_code, path_name, "exec")
     return code, path_name

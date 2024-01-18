@@ -16,7 +16,7 @@ import { KeyCode } from 'vs/base/common/keyCodes';
 import * as lifecycle from 'vs/base/common/lifecycle';
 import { isMacintosh } from 'vs/base/common/platform';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
-import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition, IMouseTarget } from 'vs/editor/browser/editorBrowser';
+import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition } from 'vs/editor/browser/editorBrowser';
 import { ConfigurationChangedEvent, EditorOption } from 'vs/editor/common/config/editorOptions';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
@@ -90,7 +90,7 @@ export class DebugHoverWidget implements IContentWidget {
 	private debugHoverComputer: DebugHoverComputer;
 	private normalContent: string = nls.localize({ key: 'quickTip', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'Hold {0} key to switch to editor language hover ', isMacintosh ? 'Option' : 'Alt');
 	private sketchContent: string = nls.localize({ key: 'quickTip2', comment: ['"switch to editor language hover" means to show the programming language hover widget instead of the debug hover'] }, 'click to change acceptance option ', isMacintosh ? 'Option' : 'Alt');
-	private mouseTarget: IMouseTarget | undefined;
+	// private mouseTarget: IMouseTarget | undefined;
 	constructor(
 		private editor: ICodeEditor,
 		@IDebugService private readonly debugService: IDebugService,
@@ -103,7 +103,7 @@ export class DebugHoverWidget implements IContentWidget {
 		this.positionPreference = [ContentWidgetPositionPreference.ABOVE, ContentWidgetPositionPreference.BELOW];
 		this.debugHoverComputer = this.instantiationService.createInstance(DebugHoverComputer, this.editor);
 		this.toDispose.push(this.editor.onMouseMove((e) => {
-			this.mouseTarget = e.target;
+			// this.mouseTarget = e.target;
 		}));
 	}
 
@@ -518,11 +518,11 @@ class DebugHoverComputer {
 		return { rangeChanged, range: this._currentRange };
 	}
 	private async createExpressionStringForSketch(lineNumber: number): Promise<string> {
-		const experssion = `synt_dict[${lineNumber}]`;
-		const hasSolutionExpression = new Expression(`'solution' in ${experssion}`);
-		await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
+		// const expression = `synt_dict[${lineNumber}]`;
+		// const hasSolutionExpression = new Expression(`'solution' in ${expression}`);
+		// await hasSolutionExpression.evaluate(this.debugService.getViewModel().focusedSession, this.debugService.getViewModel().focusedStackFrame, 'hover');
 		// if (hasSolutionExpression.value === 'True') {
-		// 	return experssion;
+		// 	return expression
 		// }
 		return `sketchValueContainer`;
 	}
@@ -575,9 +575,9 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 
 			// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
 			// Mad ugly, but works
-			const session = await this.debugService.getViewModel().focusedSession;
-			const thread = await this.debugService.getViewModel().focusedThread;
-			const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
+			const session = this.debugService.getViewModel().focusedSession;
+			const thread = this.debugService.getViewModel().focusedThread;
+			const stackFrame = this.debugService.getViewModel().focusedStackFrame;
 			const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
 
 			const scopes = await stackFrame?.getScopes();
