@@ -16,7 +16,7 @@ based on img-summary.py
 class Sketch:
     def __init__(self):
         self.sketchValue = None 
-        self.suggestedValue = None # To have suggeted value in the sketch hover widget
+        # self.suggestedValue = None # To have suggeted value in the sketch hover widget
 
     # Not used
     # def update_synt_dict(self, localState, frameinfo, global_state):
@@ -56,7 +56,8 @@ def ad_hoc_eval_solution(line_number, localState):
             return synt_dict[line_number]["overrideValue"]
         if "solution" in synt_dict[line_number]:
             output = eval(synt_dict[line_number]["solution"], localState)
-            sketchValueContainer.suggestedValue = output
+            synt_dict[line_number]["generated_solution"] = output
+            sketchValueContainer.sketchValue = output
             return output
 
     return sketchValueContainer.sketchValue
@@ -94,7 +95,7 @@ def get_preserved_local_state(locals_state):
 
 def update_synt_dict(locals_state_json, value, current_line):
     locals_state = convert_json_localstate(locals_state_json) # don't need preserved as we are already given only the preserved local state
-    
+
     if current_line in synt_dict:
         # Grim but works
         if locals_state in synt_dict[current_line]["input"]:
@@ -102,7 +103,10 @@ def update_synt_dict(locals_state_json, value, current_line):
             synt_dict[current_line]["output"][idx] = value
             return
 
-        if (o_val := synt_dict[current_line].get("OverrideValue")):
+        if (synt_dict[current_line].get("solution") and value != synt_dict[current_line].get("generated_solution")):
+            synt_dict[current_line]["overrideValue"] = value
+
+        if (o_val := synt_dict[current_line].get("overrideValue")):
             del synt_dict[current_line]["solution"]
             sketchValueContainer.sketchValue = o_val
             synt_dict[current_line]["overrideValue"] = None
