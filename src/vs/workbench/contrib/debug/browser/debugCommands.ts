@@ -41,7 +41,8 @@ import { doesTrigger, minimumUniqueExamples4Triggerless, triggerlessExtraBreakpo
 import { DeSyntView } from 'vs/workbench/contrib/debug/browser/deSyntView';
 import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
 import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSessionPicker';
-import { CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_DEBUGGERS_AVAILABLE, CONTEXT_DEBUG_STATE, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_EXPRESSION_SELECTED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, CONTEXT_IN_DEBUG_MODE, CONTEXT_IN_DEBUG_REPL, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, CONTEXT_STEP_INTO_TARGETS_SUPPORTED, CONTEXT_VARIABLES_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, DESYNT_VIEW_ID, EDITOR_CONTRIBUTION_ID, IConfig, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IEnablement, IStackFrame, IThread, REPL_VIEW_ID, State, VIEWLET_ID, getStateLabel } from 'vs/workbench/contrib/debug/common/debug';
+import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
+import { CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_DEBUGGERS_AVAILABLE, CONTEXT_DEBUG_STATE, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_EXPRESSION_SELECTED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, CONTEXT_IN_DEBUG_MODE, CONTEXT_IN_DEBUG_REPL, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, CONTEXT_STEP_INTO_TARGETS_SUPPORTED, CONTEXT_VARIABLES_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, DESYNT_VIEW_ID, EDITOR_CONTRIBUTION_ID, IConfig, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IEnablement, IExceptionInfo, IStackFrame, IThread, REPL_VIEW_ID, State, VIEWLET_ID, getStateLabel } from 'vs/workbench/contrib/debug/common/debug';
 import { Breakpoint, DataBreakpoint, Expression, FunctionBreakpoint, Thread, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 import { saveAllBeforeDebugStart } from 'vs/workbench/contrib/debug/common/debugUtils';
 import { showLoadedScriptMenu } from 'vs/workbench/contrib/debug/common/loadedScriptsPicker';
@@ -924,28 +925,49 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const codeEditorService = accessor.get(ICodeEditorService);
 		const codeEditor = codeEditorService.getActiveCodeEditor();
 		const debugService = accessor.get(IDebugService);
+		const instantiationService = accessor.get(IInstantiationService);
 		const localDesyntView = createLocalDesyntView(accessor);
-		debugService.getViewModel().updateViews(); // Used to check if no value is given
 
-		if (doesTrigger) {
-			await getThreadAndRun(accessor, context, thread => thread.continue());
-			return;
-		}
-		const sf = await debugService.getViewModel().focusedStackFrame;
-		if (codeEditor && sf) {
-			const currentLine = sf.range.startLineNumber;
-			const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-			if (currentCodeLine && currentCodeLine.includes('??')) {
-				const session = await debugService.getViewModel().focusedSession;
-				await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
-				// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
-				// TOODO: Leads to error for desynt synthesis
-				if (localDesyntView.solution && triggerlessExtraBreakpoint) {
-					await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
+		// This is horrible but works for now
+		const sf = debugService.getViewModel().focusedStackFrame;
+		if (sf) {
+			if (!debugService.validDesynt) {
+				const currentLine = sf.range.startLineNumber;
+				if (codeEditor) {
+					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+					if (currentCodeLine && currentCodeLine.includes('??')) {
+						const debugSession = debugService.getViewModel().focusedSession;
+						const exceptionInfo: IExceptionInfo = { description: 'Must supply a valid sketch value', breakMode: null };
+
+						const exceptionWidget = instantiationService.createInstance(ExceptionWidget, codeEditor!, exceptionInfo, debugSession);
+						const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)!;
+						// This is bad I know
+						codeEditorContribution.exceptionWidget = exceptionWidget;
+						codeEditorContribution.showExceptionWidget(exceptionInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
+					}
+					return;
 				}
+			} else {
+				if (doesTrigger) {
+					await getThreadAndRun(accessor, context, thread => thread.continue());
+					return;
+				}
+				if (codeEditor && sf) {
+					const currentLine = sf.range.startLineNumber;
+					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+					if (currentCodeLine && currentCodeLine.includes('??')) {
+						const session = await debugService.getViewModel().focusedSession;
+						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+						// TOODO: Leads to error for desynt synthesis
+						if (localDesyntView.solution && triggerlessExtraBreakpoint) {
+							await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
+						}
+					}
+				}
+				await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 			}
 		}
-		await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 	}
 
 });

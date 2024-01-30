@@ -33,7 +33,7 @@ import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storag
 import { asCssVariable, editorHoverBackground, editorHoverBorder, editorHoverForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 import { IInputBoxOptions, renderExpressionValue } from 'vs/workbench/contrib/debug/browser/baseDebugView';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
-import { VariablesRenderer } from 'vs/workbench/contrib/debug/browser/variablesView';
+import { VariablesRenderer, updateForgetScopes } from 'vs/workbench/contrib/debug/browser/variablesView';
 import { IDebugService, IDebugSession, IExpression, IExpressionContainer, IStackFrame } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 import { getEvaluatableExpressionAtPosition } from 'vs/workbench/contrib/debug/common/debugUtils';
@@ -565,36 +565,42 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 	}
 	protected override getInputBoxOptions(expression: IExpression): IInputBoxOptions {
 		const inputBoxOptions = super.getInputBoxOptions(expression);
-		const oldOnFinish = inputBoxOptions.onFinish;
+		//const oldOnFinish = inputBoxOptions.onFinish;
 		const variable = <Variable>expression;
-		variable.inDesynt = true;
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
+			variable.errorMessage = undefined;
+			variable.inDesynt = true;
+			const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
 
-			// Needed to notify if at new iteration
-			// Crap solution done by adding desytniteration to storage
-			oldOnFinish(value, success);
-			if (value !== 'None') {
-				this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
-			}
-			// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
-			// Mad ugly, but works
-			const session = this.debugService.getViewModel().focusedSession;
-			const thread = this.debugService.getViewModel().focusedThread;
-			const stackFrame = this.debugService.getViewModel().focusedStackFrame;
-			const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
+			// This is nice but slows the update of the views down a bit
+			if (success && (variable.value !== value || (variable.inDesynt && value === 'None')) && focusedStackFrame) {
+				variable.setVariable(value, focusedStackFrame)
+					.then(async () => {
+						updateForgetScopes(false);
+						if (!variable.errorMessage) {
+							this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
+							// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
+							// Mad ugly, but works
+							const session = this.debugService.getViewModel().focusedSession;
+							const thread = this.debugService.getViewModel().focusedThread;
+							const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
 
-			const scopes = await stackFrame?.getScopes();
-			const localScope = await scopes!.
-				find(s => s.name === 'Locals')?.
-				getChildren()!;
-			const locals = JSON.stringify(localScope.map(l => l.toString()));
+							const scopes = await focusedStackFrame?.getScopes();
+							const localScope = await scopes!.
+								find(s => s.name === 'Locals')?.
+								getChildren()!;
+							const locals = JSON.stringify(localScope.map(l => l.toString()));
 
-			if (value === 'None') {
-
-			}
-			if (session && stackFrame && wrapperFrame) {
-				const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${stackFrame.range.startLineNumber})`;
-				await session.evaluate(updateEvaluation, wrapperFrame.frameId);
+							if (session && focusedStackFrame && wrapperFrame) {
+								const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
+								await session.evaluate(updateEvaluation, wrapperFrame.frameId);
+							}
+							this.debugService.validDesynt = true;
+						} else {
+							this.debugService.validDesynt = false;
+						}
+						this.debugService.getViewModel().updateViews();
+					});
 			}
 
 

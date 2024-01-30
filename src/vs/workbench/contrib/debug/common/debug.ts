@@ -972,6 +972,8 @@ export interface IDebugService {
 
 	readonly initializingOptions?: IDebugSessionOptions | undefined;
 
+	validDesynt: boolean;
+
 	/**
 	 * Allows to register on debug state changes.
 	 */

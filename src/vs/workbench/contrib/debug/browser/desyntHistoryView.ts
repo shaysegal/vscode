@@ -577,13 +577,6 @@ export class DesyntHistoryView extends ViewPane {
 				}
 			}
 			));
-			this._register(this.debugService.getViewModel().onWillUpdateViews(async () => {
-				const desired_key = (this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString();
-				if (this.keyRunningNumber === 0 && !this.storageService.get(desired_key, StorageScope.APPLICATION)) {
-					await this.addChangeToDesyntView(root, 'No value given');
-					scheduleRefreshOnVisible();
-				}
-			}));
 			this._register(this.storageService.onDidChangeValue(async e => {
 				// Wasn't won't work between iterations with the same value
 				// Done by changing the storagaeService to also hold to keyiteration so it can be accessed from the hover widget
@@ -711,11 +704,7 @@ export class DesyntHistoryView extends ViewPane {
 			currentParentItem = root.getChild(parentKey) as DesyntHistoryTreeItem;
 		}
 
-		if (value === 'No value given') {
-			currentParentItem.createIfNeeded(key, () => new DesyntHistoryTreeItem(currentParentItem, value));
-		} else {
-			currentParentItem.createIfNeeded(key, () => new DesyntHistoryTreeItem(currentParentItem, 'set sketch value to: ' + value));
-		}
+		currentParentItem.createIfNeeded(key, () => new DesyntHistoryTreeItem(currentParentItem, 'set sketch value to: ' + value));
 		// this.keyRunningNumber += 1; // Commented to to have new sketch values replace previous ones instead of accumulating sketches
 	}
 
