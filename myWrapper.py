@@ -94,6 +94,9 @@ def get_preserved_local_state(locals_state):
     return preserved_local_state
 
 def update_synt_dict(locals_state_json, value, current_line):
+    if not value:
+        raise RuntimeError("Cannot set sketchValue to None")
+
     locals_state = convert_json_localstate(locals_state_json) # don't need preserved as we are already given only the preserved local state
 
     if current_line in synt_dict:
@@ -144,11 +147,10 @@ def try_get_solution(locals_state, globals_state, current_line):
         )
 
 def alter__a__(current_line, locals_state, globals_state):
+    if not synt_dict:
+        return None
     if "solution" in synt_dict[current_line]:
-            return try_get_solution(locals_state, globals_state, current_line)
-
-    if sketchValueContainer.sketchValue is None:
-        raise RuntimeError("no sketch value ... can't contiue")
+        return try_get_solution(locals_state, globals_state, current_line)
     else:
         return_value = sketchValueContainer.sketchValue
     return return_value
