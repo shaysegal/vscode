@@ -910,7 +910,7 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 		}, async () => { // task
 			return await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
 		}, () => { //on cancel
-			//TODO return localDesyntView.cancelSynthesis();
+			// TODO return localDesyntView.cancelSynthesis();!!
 		});
 	}
 }
@@ -925,6 +925,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const codeEditor = codeEditorService.getActiveCodeEditor();
 		const debugService = accessor.get(IDebugService);
 		const localDesyntView = createLocalDesyntView(accessor);
+		debugService.getViewModel().updateViews(); // Used to check if no value is given
 
 		if (doesTrigger) {
 			await getThreadAndRun(accessor, context, thread => thread.continue());
