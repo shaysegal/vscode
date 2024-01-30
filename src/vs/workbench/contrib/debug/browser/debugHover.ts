@@ -566,13 +566,16 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 	protected override getInputBoxOptions(expression: IExpression): IInputBoxOptions {
 		const inputBoxOptions = super.getInputBoxOptions(expression);
 		const oldOnFinish = inputBoxOptions.onFinish;
+		const variable = <Variable>expression;
+		variable.inDesynt = true;
 		inputBoxOptions.onFinish = async (value: string, success: boolean) => {
 
-			// TODO: Need to notify if at new iteration
+			// Needed to notify if at new iteration
 			// Crap solution done by adding desytniteration to storage
-			this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			oldOnFinish(value, success);
-
+			if (variable.value !== 'None') {
+				this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
+			}
 			// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
 			// Mad ugly, but works
 			const session = this.debugService.getViewModel().focusedSession;
@@ -586,10 +589,14 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 				getChildren()!;
 			const locals = JSON.stringify(localScope.map(l => l.toString()));
 
+			if (value === 'None') {
+
+			}
 			if (session && stackFrame && wrapperFrame) {
 				const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${stackFrame.range.startLineNumber})`;
 				await session.evaluate(updateEvaluation, wrapperFrame.frameId);
 			}
+
 
 			// Debug continuation after the user inserts the desired value to fill hole
 			// const threadToContinue = this.debugService.getViewModel().focusedThread;

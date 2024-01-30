@@ -5,10 +5,11 @@
 
 import { distinct, lastIndex } from 'vs/base/common/arrays';
 import { RunOnceScheduler } from 'vs/base/common/async';
-import { decodeBase64, encodeBase64, VSBuffer } from 'vs/base/common/buffer';
+import { VSBuffer, decodeBase64, encodeBase64 } from 'vs/base/common/buffer';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
-import { stringHash } from 'vs/base/common/hash';
+import { ErrorNoTelemetry } from 'vs/base/common/errors';
 import { Emitter, Event } from 'vs/base/common/event';
+import { stringHash } from 'vs/base/common/hash';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { mixin } from 'vs/base/common/objects';
 import * as resources from 'vs/base/common/resources';
@@ -19,8 +20,8 @@ import { IRange, Range } from 'vs/editor/common/core/range';
 import * as nls from 'vs/nls';
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
 import { IEditorPane } from 'vs/workbench/common/editor';
-import { DEBUG_MEMORY_SCHEME, IBaseBreakpoint, IBreakpoint, IBreakpointData, IBreakpointsChangeEvent, IBreakpointUpdateData, IDataBreakpoint, IDebugModel, IDebugSession, IEnablement, IExceptionBreakpoint, IExceptionInfo, IExpression, IExpressionContainer, IFunctionBreakpoint, IInstructionBreakpoint, IMemoryInvalidationEvent, IMemoryRegion, IRawModelUpdate, IRawStoppedDetails, IScope, IStackFrame, IThread, ITreeElement, MemoryRange, MemoryRangeType, State } from 'vs/workbench/contrib/debug/common/debug';
-import { getUriFromSource, Source, UNKNOWN_SOURCE_LABEL } from 'vs/workbench/contrib/debug/common/debugSource';
+import { DEBUG_MEMORY_SCHEME, IBaseBreakpoint, IBreakpoint, IBreakpointData, IBreakpointUpdateData, IBreakpointsChangeEvent, IDataBreakpoint, IDebugModel, IDebugSession, IEnablement, IExceptionBreakpoint, IExceptionInfo, IExpression, IExpressionContainer, IFunctionBreakpoint, IInstructionBreakpoint, IMemoryInvalidationEvent, IMemoryRegion, IRawModelUpdate, IRawStoppedDetails, IScope, IStackFrame, IThread, ITreeElement, MemoryRange, MemoryRangeType, State } from 'vs/workbench/contrib/debug/common/debug';
+import { Source, UNKNOWN_SOURCE_LABEL, getUriFromSource } from 'vs/workbench/contrib/debug/common/debugSource';
 import { DebugStorage } from 'vs/workbench/contrib/debug/common/debugStorage';
 import { DisassemblyViewInput } from 'vs/workbench/contrib/debug/common/disassemblyViewInput';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
@@ -148,6 +149,7 @@ export class ExpressionContainer implements IExpressionContainer {
 	private async fetchVariables(start: number | undefined, count: number | undefined, filter: 'indexed' | 'named' | undefined): Promise<Variable[]> {
 		try {
 			const response = await this.session!.variables(this.reference || 0, this.threadId, filter, start, count);
+
 			if (!response || !response.body || !response.body.variables) {
 				return [];
 			}
@@ -279,6 +281,7 @@ export class Variable extends ExpressionContainer implements IExpression {
 
 	// Used to show the error message coming from the adapter when setting the value #7807
 	public errorMessage: string | undefined;
+	public inDesynt: boolean;
 
 	constructor(
 		session: IDebugSession | undefined,
@@ -297,10 +300,12 @@ export class Variable extends ExpressionContainer implements IExpression {
 		public readonly available = true,
 		startOfVariables = 0,
 		idDuplicationIndex = '',
+		inDesynt = false,
 	) {
 		super(session, threadId, reference, `variable:${parent.getId()}:${name}:${idDuplicationIndex}`, namedVariables, indexedVariables, memoryReference, startOfVariables, presentationHint);
 		this.value = value || '';
 		this.type = type;
+		this.inDesynt = inDesynt;
 	}
 
 	async setVariable(value: string, stackFrame: IStackFrame): Promise<any> {
@@ -312,6 +317,10 @@ export class Variable extends ExpressionContainer implements IExpression {
 			// Send out a setExpression for debug extensions that do not support set variables https://github.com/microsoft/vscode/issues/124679#issuecomment-869844437
 			if (this.session.capabilities.supportsSetExpression && !this.session.capabilities.supportsSetVariable && this.evaluateName) {
 				return this.setExpression(value, stackFrame);
+			}
+
+			if (this.inDesynt && value === 'None') {
+				throw new ErrorNoTelemetry('Cannot set sketchValue to None');
 			}
 
 			const response = await this.session.setVariable((<ExpressionContainer>this.parent).reference, this.name, value);

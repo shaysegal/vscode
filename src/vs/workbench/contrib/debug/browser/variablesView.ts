@@ -14,7 +14,7 @@ import { IAction } from 'vs/base/common/actions';
 import { coalesce } from 'vs/base/common/arrays';
 import { RunOnceScheduler, timeout } from 'vs/base/common/async';
 import { Codicon } from 'vs/base/common/codicons';
-import { createMatches, FuzzyScore } from 'vs/base/common/filters';
+import { FuzzyScore, createMatches } from 'vs/base/common/filters';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { withUndefinedAsNull } from 'vs/base/common/types';
 import { localize } from 'vs/nls';
@@ -39,7 +39,7 @@ import { IViewDescriptorService } from 'vs/workbench/common/views';
 import { AbstractExpressionsRenderer, IExpressionTemplateData, IInputBoxOptions, renderVariable, renderViewTree } from 'vs/workbench/contrib/debug/browser/baseDebugView';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { CONTEXT_BREAK_WHEN_VALUE_CHANGES_SUPPORTED, CONTEXT_BREAK_WHEN_VALUE_IS_ACCESSED_SUPPORTED, CONTEXT_BREAK_WHEN_VALUE_IS_READ_SUPPORTED, CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DEBUG_PROTOCOL_VARIABLE_MENU_CONTEXT, CONTEXT_VARIABLES_FOCUSED, CONTEXT_VARIABLE_EVALUATE_NAME_PRESENT, CONTEXT_VARIABLE_IS_READONLY, IDataBreakpointInfoResponse, IDebugService, IExpression, IScope, IStackFrame, VARIABLES_VIEW_ID } from 'vs/workbench/contrib/debug/common/debug';
-import { ErrorScope, Expression, getUriForDebugMemory, Scope, StackFrame, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
+import { ErrorScope, Expression, Scope, StackFrame, Variable, getUriForDebugMemory } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IEditorService, SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 
@@ -428,7 +428,7 @@ export class VariablesRenderer extends AbstractExpressionsRenderer {
 			onFinish: (value: string, success: boolean) => {
 				variable.errorMessage = undefined;
 				const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
-				if (success && variable.value !== value && focusedStackFrame) {
+				if (success && (variable.value !== value || (variable.inDesynt && value === 'None')) && focusedStackFrame) {
 					variable.setVariable(value, focusedStackFrame)
 						// Need to force watch expressions and variables to update since a variable change can have an effect on both
 						.then(() => {
