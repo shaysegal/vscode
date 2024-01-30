@@ -573,7 +573,7 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 			// Needed to notify if at new iteration
 			// Crap solution done by adding desytniteration to storage
 			oldOnFinish(value, success);
-			if (variable.value !== 'None') {
+			if (value !== 'None') {
 				this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
 			// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
