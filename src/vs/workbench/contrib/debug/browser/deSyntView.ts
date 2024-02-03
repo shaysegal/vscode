@@ -156,12 +156,14 @@ export class DeSyntView extends ViewPane {
 		CONTEXT_DESYNT_FOCUSED.bindTo(this.tree.contextKeyService);
 		//my code adding button of synthesis options
 		let clicked = false;
-		const controller = new AbortController();
+		let controller = new AbortController();
 		button.label = buttonLabel;
 		this._register(button.onDidClick(async () => {
 			if (clicked) {
 				button.label = 'Cancled';
 				controller.abort();
+				clicked = false;
+				controller = new AbortController();
 				return;
 
 			}

@@ -85,6 +85,7 @@ suite('Multicursor selection', () => {
 	const queryState: { [key: string]: any } = {};
 	const serviceCollection = new ServiceCollection();
 	serviceCollection.set(IStorageService, {
+		desyntIteration: 0,
 		_serviceBrand: undefined,
 		onDidChangeValue: Event.None,
 		onDidChangeTarget: Event.None,

@@ -68,6 +68,7 @@ suite('FindController', async () => {
 	let clipboardState = '';
 	const serviceCollection = new ServiceCollection();
 	serviceCollection.set(IStorageService, {
+		desyntIteration: 0,
 		_serviceBrand: undefined,
 		onDidChangeTarget: Event.None,
 		onDidChangeValue: Event.None,
@@ -500,6 +501,7 @@ suite('FindController query options persistence', async () => {
 	queryState['editor.wholeWord'] = false;
 	const serviceCollection = new ServiceCollection();
 	serviceCollection.set(IStorageService, {
+		desyntIteration: 0,
 		_serviceBrand: undefined,
 		onDidChangeTarget: Event.None,
 		onDidChangeValue: Event.None,

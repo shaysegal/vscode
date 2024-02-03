@@ -8,7 +8,7 @@ import { DomEmitter } from 'vs/base/browser/event';
 import { IKeyboardEvent, StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { distinct, flatten } from 'vs/base/common/arrays';
 import { RunOnceScheduler } from 'vs/base/common/async';
-import { CancellationTokenSource } from 'vs/base/common/cancellation';
+import { CancellationToken, CancellationTokenSource } from 'vs/base/common/cancellation';
 import { memoize } from 'vs/base/common/decorators';
 import { onUnexpectedExternalError } from 'vs/base/common/errors';
 import { Event } from 'vs/base/common/event';
@@ -28,7 +28,7 @@ import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import { DEFAULT_WORD_REGEXP } from 'vs/editor/common/core/wordHelper';
 import { StandardTokenType } from 'vs/editor/common/encodedTokenAttributes';
-import { InlineValueContext } from 'vs/editor/common/languages';
+import { CompletionContext, CompletionItem, CompletionItemKind, CompletionList, InlineValueContext } from 'vs/editor/common/languages';
 import { IModelDeltaDecoration, ITextModel, InjectedTextCursorStops, ValidAnnotatedEditOperation } from 'vs/editor/common/model';
 import { IFeatureDebounceInformation, ILanguageFeatureDebounceService } from 'vs/editor/common/services/languageFeatureDebounce';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
@@ -41,6 +41,7 @@ import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/c
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
+//import { SnippetString } from 'vs/workbench/api/common/extHostTypes';
 import { FloatingClickWidget } from 'vs/workbench/browser/codeeditor';
 import { suggestedValueAsComment, suggestedValueInline } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
@@ -50,6 +51,7 @@ import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorCont
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 
+//import { SnippetController2 } from 'vs/editor/contrib/snippet/browser/snippetController2';
 const MAX_NUM_INLINE_VALUES = 100; // JS Global scope can have 700+ entries. We want to limit ourselves for perf reasons
 const MAX_INLINE_DECORATOR_LENGTH = 150; // Max string length of each inline decorator when debugging. If exceeded ... is added
 const MAX_TOKENIZATION_LINE_LEN = 500; // If line is too long, then inline values for the line are skipped
@@ -129,14 +131,14 @@ function createInlineValueDecorationDesynt(lineNumber: number, contentText: stri
 			range: {
 				startLineNumber: lineNumber,
 				endLineNumber: lineNumber,
-				startColumn: column,
+				startColumn: 0,
 				endColumn: column
 			},
 			options: {
 				description: 'debug-inline-value-decoration-desynt',
 				after: {
-					content: replaceWsWithNoBreakWs(' SUGGESTED SOLUTION: ' + contentText),
-					inlineClassName: striked ? 'debug-inline-value-striked' : 'debug-inline-value',
+					content: replaceWsWithNoBreakWs(contentText),
+					inlineClassName: striked ? 'debug-inline-value-striked' : 'desynt-ghost-text-decoration-preview',
 					inlineClassNameAffectsLetterSpacing: true,
 					cursorStops: InjectedTextCursorStops.None
 				},
@@ -874,6 +876,13 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				}
 				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 			}
+			// if (objSyntDict[sketch_line] && solutionKey in objSyntDict[sketch_line]) {
+			// 	//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
+			// 	const striked = 'overrideValue' in objSyntDict[sketch_line] && objSyntDict[sketch_line]['overrideValue'] !== null;
+			// 	(this.debugService as DebugService).candidateExist.set(!striked);
+			// 	const desyntDecoration = createInlineValueDecorationDesynt(sketch_line, objSyntDict[sketch_line][solutionKey], striked);
+			// 	allDecorations.push(...desyntDecoration);
+			// }
 		}
 		return;
 	}

@@ -883,6 +883,19 @@ export class TextAreaHandler extends ViewPart {
 				tac.setClassName('monaco-editor-background textAreaCover');
 			}
 		}
+		const holeElement = document.getElementsByClassName("mtk10")
+		if (holeElement.length == 1) {
+			const hole = holeElement[0] as HTMLElement;
+			if (hole) {
+				const suggestedProgram = document.getElementsByClassName("desynt-ghost-text-decoration-preview")
+				if (suggestedProgram.length > 0)
+					hole.style.opacity = "0";
+				else {
+					hole.style.opacity = "100";
+				}
+			}
+		}
+
 	}
 }
 
