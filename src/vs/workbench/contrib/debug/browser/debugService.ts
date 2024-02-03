@@ -40,7 +40,7 @@ import { DebugMemoryFileSystemProvider } from 'vs/workbench/contrib/debug/browse
 import { DebugSession } from 'vs/workbench/contrib/debug/browser/debugSession';
 import { DebugTaskRunner, TaskRunResult } from 'vs/workbench/contrib/debug/browser/debugTaskRunner';
 import { RestartSynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, SythesizerCleanRequestRoute } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
-import { CALLSTACK_VIEW_ID, CONTEXT_BREAKPOINTS_EXIST, CONTEXT_HAS_DEBUGGED, CONTEXT_DEBUG_STATE, CONTEXT_DEBUG_TYPE, CONTEXT_DEBUG_UX, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_IN_DEBUG_MODE, debuggerDisabledMessage, DEBUG_MEMORY_SCHEME, getStateLabel, IAdapterManager, IBreakpoint, IBreakpointData, ICompound, IConfig, IConfigurationManager, IDebugConfiguration, IDebugModel, IDebugService, IDebugSession, IDebugSessionOptions, IEnablement, IExceptionBreakpoint, IGlobalConfig, ILaunch, IStackFrame, IThread, IViewModel, REPL_VIEW_ID, State, VIEWLET_ID, CONTEXT_DESYNT_CANDIDATE_EXIST } from 'vs/workbench/contrib/debug/common/debug';
+import { CALLSTACK_VIEW_ID, CONTEXT_BREAKPOINTS_EXIST, CONTEXT_DEBUG_STATE, CONTEXT_DEBUG_TYPE, CONTEXT_DEBUG_UX, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_HAS_DEBUGGED, CONTEXT_IN_DEBUG_MODE, DEBUG_MEMORY_SCHEME, debuggerDisabledMessage, getStateLabel, IAdapterManager, IBreakpoint, IBreakpointData, ICompound, IConfig, IConfigurationManager, IDebugConfiguration, IDebugModel, IDebugService, IDebugSession, IDebugSessionOptions, IEnablement, IExceptionBreakpoint, IGlobalConfig, ILaunch, IStackFrame, IThread, IViewModel, REPL_VIEW_ID, State, VIEWLET_ID } from 'vs/workbench/contrib/debug/common/debug';
 import { DebugCompoundRoot } from 'vs/workbench/contrib/debug/common/debugCompoundRoot';
 import { Debugger } from 'vs/workbench/contrib/debug/common/debugger';
 import { Breakpoint, DataBreakpoint, DebugModel, FunctionBreakpoint, InstructionBreakpoint } from 'vs/workbench/contrib/debug/common/debugModel';
@@ -88,6 +88,7 @@ export class DebugService implements IDebugService {
 	private chosenEnvironments: { [key: string]: string };
 	private haveDoneLazySetup = false;
 	public candidateExist!: IContextKey<boolean>;
+	public validDesynt: boolean;
 
 	constructor(
 		@IEditorService private readonly editorService: IEditorService,
@@ -112,6 +113,8 @@ export class DebugService implements IDebugService {
 		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService
 	) {
 		this.breakpointsToSendOnResourceSaved = new Set<URI>();
+
+		this.validDesynt = false;
 
 		this._onDidChangeState = new Emitter<State>();
 		this._onDidNewSession = new Emitter<IDebugSession>();
