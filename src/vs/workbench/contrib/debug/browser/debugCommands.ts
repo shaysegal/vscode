@@ -907,11 +907,9 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 			location: ProgressLocation.Notification,
 			delay: 750,
 			title: nls.localize('synthesizingSketch', "Running synthesizer..."),
-			cancellable: true,
+			cancellable: false,
 		}, async () => { // task
 			return await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
-		}, () => { //on cancel
-			// TODO return localDesyntView.cancelSynthesis();!!
 		});
 	}
 }
