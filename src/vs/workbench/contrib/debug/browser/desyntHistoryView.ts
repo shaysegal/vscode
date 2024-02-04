@@ -566,7 +566,6 @@ export class DesyntHistoryView extends ViewPane {
 					this.keyRunningNumber = 0;
 					if (root.getChild(this.keyIteration.toString())) {
 						this.keyIteration += 1;
-						this.storageService.desyntIteration += 1; // rough
 					}
 				}
 				if (e === State.Inactive || e === State.Initializing) {

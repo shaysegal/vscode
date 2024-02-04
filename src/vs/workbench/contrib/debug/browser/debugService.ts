@@ -88,7 +88,7 @@ export class DebugService implements IDebugService {
 	private chosenEnvironments: { [key: string]: string };
 	private haveDoneLazySetup = false;
 	public candidateExist!: IContextKey<boolean>;
-	public validDesynt: boolean;
+	public validDesynt: boolean = false;
 
 	constructor(
 		@IEditorService private readonly editorService: IEditorService,

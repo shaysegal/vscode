@@ -428,7 +428,7 @@ export class VariablesRenderer extends AbstractExpressionsRenderer {
 			onFinish: (value: string, success: boolean) => {
 				variable.errorMessage = undefined;
 				const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
-				if (success && (variable.value !== value || (variable.inDesynt && value === 'None')) && focusedStackFrame) {
+				if (success && variable.value !== value && focusedStackFrame) {
 					variable.setVariable(value, focusedStackFrame)
 						// Need to force watch expressions and variables to update since a variable change can have an effect on both
 						.then(() => {

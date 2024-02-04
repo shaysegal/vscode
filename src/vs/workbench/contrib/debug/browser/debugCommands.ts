@@ -32,6 +32,7 @@ import { INotificationService } from 'vs/platform/notification/common/notificati
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IProgressService, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { IQuickInputService, IQuickPickItem } from 'vs/platform/quickinput/common/quickInput';
+import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ActiveEditorContext, PanelFocusContext, ResourceContextKey } from 'vs/workbench/common/contextkeys';
@@ -924,6 +925,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const codeEditor = codeEditorService.getActiveCodeEditor();
 		const debugService = accessor.get(IDebugService);
 		const instantiationService = accessor.get(IInstantiationService);
+		const storageService = accessor.get(IStorageService);
 		const localDesyntView = createLocalDesyntView(accessor);
 
 		// This is horrible but works for now
@@ -933,12 +935,12 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				const currentLine = sf.range.startLineNumber;
 				if (codeEditor) {
 					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-					if (currentCodeLine && currentCodeLine.includes('??')) {
+					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)!;
+					if (currentCodeLine && currentCodeLine.includes('??') && !codeEditorContribution.exceptionWidget) {
 						const debugSession = debugService.getViewModel().focusedSession;
 						const exceptionInfo: IExceptionInfo = { description: 'Must supply a valid sketch value', breakMode: null };
 
 						const exceptionWidget = instantiationService.createInstance(ExceptionWidget, codeEditor!, exceptionInfo, debugSession);
-						const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)!;
 						// This is bad I know
 						codeEditorContribution.exceptionWidget = exceptionWidget;
 						codeEditorContribution.showExceptionWidget(exceptionInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
@@ -946,6 +948,15 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 					return;
 				}
 			} else {
+				// If user continues with same sketch value, we want to capture that in the desynt history view
+				storageService.desyntIteration += 1;
+				const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
+				const value = storageService.get(desiredKey, StorageScope.APPLICATION);
+				if (value === undefined && storageService.desyntIteration > 0) {
+					const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
+					storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+				}
+
 				if (doesTrigger) {
 					await getThreadAndRun(accessor, context, thread => thread.continue());
 					return;
@@ -955,6 +966,9 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
 					if (currentCodeLine && currentCodeLine.includes('??')) {
 						const session = await debugService.getViewModel().focusedSession;
+
+						// If user does not change value then need to do something
+
 						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
 						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
 						// TOODO: Leads to error for desynt synthesis
@@ -963,6 +977,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 						}
 					}
 				}
+
 				await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 			}
 		}
