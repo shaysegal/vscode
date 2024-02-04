@@ -888,7 +888,8 @@ export class TextAreaHandler extends ViewPart {
 			const hole = holeElement[0] as HTMLElement;
 			if (hole) {
 				const suggestedProgram = document.getElementsByClassName("desynt-ghost-text-decoration-preview")
-				if (suggestedProgram.length > 0)
+				const suggestedProgramStriked = document.getElementsByClassName("desynt-ghost-text-decoration-preview-striked")
+				if (suggestedProgram.length > 0 || suggestedProgramStriked.length > 0)
 					hole.style.opacity = "0";
 				else {
 					hole.style.opacity = "100";

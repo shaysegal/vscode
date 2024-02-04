@@ -138,7 +138,7 @@ function createInlineValueDecorationDesynt(lineNumber: number, contentText: stri
 				description: 'debug-inline-value-decoration-desynt',
 				after: {
 					content: replaceWsWithNoBreakWs(contentText),
-					inlineClassName: striked ? 'debug-inline-value-striked' : 'desynt-ghost-text-decoration-preview',
+					inlineClassName: striked ? 'desynt-suggest-preview-text-striked' : 'desynt-ghost-text-decoration-preview',
 					inlineClassNameAffectsLetterSpacing: true,
 					cursorStops: InjectedTextCursorStops.None
 				},
@@ -275,7 +275,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private exceptionWidgetVisible: IContextKey<boolean>;
 	private gutterIsHovered = false;
 
-	private exceptionWidget: ExceptionWidget | undefined;
+	public exceptionWidget: ExceptionWidget | undefined;
 	private configurationWidget: FloatingClickWidget | undefined;
 	private altListener: IDisposable | undefined;
 	private altPressed = false;
@@ -567,7 +567,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		}
 	}
 
-	private showExceptionWidget(exceptionInfo: IExceptionInfo, debugSession: IDebugSession | undefined, lineNumber: number, column: number): void {
+	public showExceptionWidget(exceptionInfo: IExceptionInfo, debugSession: IDebugSession | undefined, lineNumber: number, column: number): void {
 		if (this.exceptionWidget) {
 			this.exceptionWidget.dispose();
 		}

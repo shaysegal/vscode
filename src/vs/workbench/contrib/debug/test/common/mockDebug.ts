@@ -19,6 +19,7 @@ import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
 import { DebugStorage } from 'vs/workbench/contrib/debug/common/debugStorage';
 
 export class MockDebugService implements IDebugService {
+	validDesynt: boolean = false;
 	initializingOptions?: IDebugSessionOptions | undefined;
 	addDesyntWatchExpression(name?: string | undefined): void {
 		throw new Error('Method not implemented.');

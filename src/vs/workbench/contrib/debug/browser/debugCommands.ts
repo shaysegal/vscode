@@ -935,7 +935,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				const currentLine = sf.range.startLineNumber;
 				if (codeEditor) {
 					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)!;
+					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 					if (currentCodeLine && currentCodeLine.includes('??') && !codeEditorContribution.exceptionWidget) {
 						const debugSession = debugService.getViewModel().focusedSession;
 						const exceptionInfo: IExceptionInfo = { description: 'Must supply a valid sketch value', breakMode: null };
