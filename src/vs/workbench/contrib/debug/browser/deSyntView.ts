@@ -118,6 +118,9 @@ export class DeSyntView extends ViewPane {
 			const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
 		}
+
+		const updateEvaluation = `remove_sol_if_override(${stackFrame.range.startLineNumber})`;
+		await session.evaluate(updateEvaluation, stackFrame.frameId);
 		await this.sendToSynthesizer(SyntDictJson, controller);
 		return;
 	}

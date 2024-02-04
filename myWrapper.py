@@ -71,6 +71,8 @@ def ad_hoc_alter__a__(func_name):
     if len(stackframe) == 1:
         current_frame = stackframe[0]
         return alter__a__(current_frame.lineno, current_frame.frame.f_locals, current_frame.frame.f_globals)
+
+
     return None
 
 """ TODO: do this in one part
@@ -93,6 +95,11 @@ def get_preserved_local_state(locals_state):
 
     return preserved_local_state
 
+def remove_sol_if_override(current_line):
+    if (synt_dict[current_line].get("solution") and synt_dict[current_line].get("overrideValue")):
+        del synt_dict[current_line]["solution"]
+        synt_dict[current_line]["overrideValue"] = None
+
 def update_synt_dict(locals_state_json, value, current_line):
     if not value:
         raise RuntimeError("Cannot set sketchValue to None")
@@ -108,11 +115,7 @@ def update_synt_dict(locals_state_json, value, current_line):
 
         if (synt_dict[current_line].get("solution") and value != synt_dict[current_line].get("generated_solution")):
             synt_dict[current_line]["overrideValue"] = value
-
-        if (o_val := synt_dict[current_line].get("overrideValue")):
-            del synt_dict[current_line]["solution"]
-            sketchValueContainer.sketchValue = o_val
-            synt_dict[current_line]["overrideValue"] = None
+            sketchValueContainer.sketchValue = value
 
         synt_dict[current_line]["input"].append(locals_state)
         synt_dict[current_line]["output"].append(value)
