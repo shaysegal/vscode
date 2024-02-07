@@ -101,11 +101,11 @@ def remove_sol_if_override(current_line):
         synt_dict[current_line]["overrideValue"] = None
 
 def update_synt_dict(locals_state_json, value, current_line):
-    if not value:
+    if value is None:
         raise RuntimeError("Cannot set sketchValue to None")
 
     locals_state = convert_json_localstate(locals_state_json) # don't need preserved as we are already given only the preserved local state
-
+    
     if current_line in synt_dict:
         # Grim but works
         if locals_state in synt_dict[current_line]["input"]:
@@ -124,7 +124,7 @@ def update_synt_dict(locals_state_json, value, current_line):
             "input": [locals_state],
             "output": [value],
         }
-
+    
 # What does this do??
 def try_get_solution(locals_state, globals_state, current_line):
     preserved_local_state = get_preserved_local_state(locals_state)
