@@ -233,7 +233,8 @@
 			"timeout": 0,
 			"env": {
 				"VSCODE_EXTHOST_WILL_SEND_SOCKET": null,
-				"VSCODE_SKIP_PRELAUNCH": "1"
+				"VSCODE_SKIP_PRELAUNCH": "1",
+				"DOESTRIGGER": "true",
 			},
 			"cleanUp": "wholeBrowser",
 			"urlFilter": "*workbench*.html*",
