@@ -138,7 +138,7 @@ function createInlineValueDecorationDesynt(lineNumber: number, contentText: stri
 				description: 'debug-inline-value-decoration-desynt',
 				after: {
 					content: replaceWsWithNoBreakWs(contentText),
-					inlineClassName: striked ? 'desynt-suggest-preview-text-striked' : 'desynt-ghost-text-decoration-preview',
+					inlineClassName: striked ? 'desynt-ghost-text-decoration-preview-striked' : 'desynt-ghost-text-decoration-preview',
 					inlineClassNameAffectsLetterSpacing: true,
 					cursorStops: InjectedTextCursorStops.None
 				},

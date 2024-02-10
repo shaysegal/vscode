@@ -169,6 +169,11 @@ export class DeSyntView extends ViewPane {
 				controller = new AbortController();
 				return;
 
+			} else if (controller.signal.aborted) {
+				controller.abort();
+				clicked = false;
+				controller = new AbortController();
+				return;
 			}
 			clicked = true;
 			let count = 3;
@@ -191,12 +196,16 @@ export class DeSyntView extends ViewPane {
 					//	SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
 					//}
 					try {
+						if (!SyntDictJson) { throw new Error('No sketches provided'); }
 						await this.synthesize(SyntDictJson, session, stackFrame, controller);
 						//await this.sendToSynthesizer(SyntDictJson, controller);
 					} catch (e) {
 						if (e.message === 'Cancled') {
 							this.notificationSer.info('Cancled');
-						} else {
+						} else if (e.message = 'No sketches provided') {
+							this.notificationSer.info('No sketches provided');
+						}
+						else {
 							this.notificationSer.warn('Synthesizer Failed , check logs for additional data');
 							console.log('problem sending to synthesizer with exception', e);
 						}
