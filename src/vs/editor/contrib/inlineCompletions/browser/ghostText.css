@@ -54,7 +54,8 @@
 	margin-left: -1.1em;
 	font-style: italic;
 }
-.monaco-editor .desynt-suggest-preview-text-striked {
+
+.monaco-editor .desynt-ghost-text-decoration-preview-striked {
 	color: var(--vscode-editorGhostText-foreground) !important;
 	background-color: var(--vscode-editorGhostText-background);
 	border: 1px solid var(--vscode-editorGhostText-border);
