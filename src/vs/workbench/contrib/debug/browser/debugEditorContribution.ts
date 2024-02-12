@@ -43,7 +43,7 @@ import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
 //import { SnippetString } from 'vs/workbench/api/common/extHostTypes';
 import { FloatingClickWidget } from 'vs/workbench/browser/codeeditor';
-import { suggestedValueAsComment, suggestedValueInline } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+import { suggestedValueAsComment, sketchValueInline } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
@@ -914,16 +914,21 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 					if (suggestedValueAsComment) {
 						this.createSuggestedValuesComment(sketch_line, futureValue);
-					} else if (suggestedValueInline) {
-						const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
-						allDecorations.push(...futureDecoration);
+					} else if (sketchValueInline) {
+						// const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
+						const model = this.editor.getModel();
+						const lineVal = model!.getLineContent(sketch_line).trimStart();
+						const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', futureValue.body.result));
+						allDecorations.push(...sketchDecoration);
 
 					}
 				} else {
-					const model = this.editor.getModel();
-					const lineVal = model!.getLineContent(sketch_line).trimStart();
-					const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', objSyntDict[sketch_line]['output'].at(-1)));
-					allDecorations.push(...sketchDecoration);
+					if (sketchValueInline) {
+						const model = this.editor.getModel();
+						const lineVal = model!.getLineContent(sketch_line).trimStart();
+						const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', objSyntDict[sketch_line]['output'].at(-1)));
+						allDecorations.push(...sketchDecoration);
+					}
 				}
 				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 			}

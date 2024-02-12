@@ -12,4 +12,4 @@ export const minimumUniqueExamples4Triggerless = 3;
 // Design Parameters
 export const triggerlessExtraBreakpoint = false;
 export const suggestedValueAsComment = false;
-export const suggestedValueInline = false;
+export const sketchValueInline = true;
