@@ -120,6 +120,49 @@ function createInlineValueDecoration(lineNumber: number, contentText: string, co
 		},
 	];
 }
+function createInlineSketchDecoration(lineNumber: number, contentText: string, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
+	// If decoratorText is too long, trim and add ellipses. This could happen for minified files with everything on a single line
+	if (contentText.length > MAX_INLINE_DECORATOR_LENGTH) {
+		contentText = contentText.substring(0, MAX_INLINE_DECORATOR_LENGTH) + '...';
+	}
+
+	return [
+		{
+			range: {
+				startLineNumber: lineNumber,
+				endLineNumber: lineNumber,
+				startColumn: column,
+				endColumn: column
+			},
+			options: {
+				description: 'debug-inline-sketch-decoration-spacer',
+				after: {
+					content: strings.noBreakWhitespace,
+					cursorStops: InjectedTextCursorStops.None
+				},
+				showIfCollapsed: true,
+			}
+		},
+		{
+			range: {
+				startLineNumber: lineNumber,
+				endLineNumber: lineNumber,
+				startColumn: column,
+				endColumn: column
+			},
+			options: {
+				description: 'debug-inline-sketch-decoration',
+				after: {
+					content: replaceWsWithNoBreakWs(contentText),
+					inlineClassName: 'debug-inline-sketch',
+					inlineClassNameAffectsLetterSpacing: true,
+					cursorStops: InjectedTextCursorStops.None
+				},
+				showIfCollapsed: true,
+			}
+		},
+	];
+}
 function createInlineValueDecorationDesynt(lineNumber: number, contentText: string, striked: boolean, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
 	// If decoratorText is too long, trim and add ellipses. This could happen for minified files with everything on a single line
 	if (contentText.length > MAX_INLINE_DECORATOR_LENGTH) {
@@ -843,12 +886,15 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 					allDecorations.push(...desyntDecoration);
 				}
 				if (current_range.containsPosition(new Position(decoration.line, 1))) {
-					const futureValue = await this.getDesyntFutureValue(decoration.line);
-					if (futureValue && futureValue.body && futureValue.body.result) {
-						const futureDecoration = createFutureInlineValueDecoration(decoration.line, futureValue.body.result);
-						allDecorations.push(...futureDecoration);
+
+					if (suggestedValueInline) {
+						const futureValue = await this.getDesyntFutureValue(decoration.line);
+						if (futureValue && futureValue.body && futureValue.body.result) {
+							const futureDecoration = createFutureInlineValueDecoration(decoration.line, futureValue.body.result);
+							allDecorations.push(...futureDecoration);
+						}
+						allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 					}
-					allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 				}
 			}
 		}
@@ -873,6 +919,11 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 						allDecorations.push(...futureDecoration);
 
 					}
+				} else {
+					const model = this.editor.getModel();
+					const lineVal = model!.getLineContent(sketch_line).trimStart();
+					const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', objSyntDict[sketch_line]['output'].at(-1)));
+					allDecorations.push(...sketchDecoration);
 				}
 				allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 			}

@@ -37,7 +37,7 @@ import { SynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, Sythesi
 import { watchExpressionsAdd, watchExpressionsRemoveAll } from 'vs/workbench/contrib/debug/browser/debugIcons';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { VariablesRenderer, updateForgetScopes, } from 'vs/workbench/contrib/debug/browser/variablesView';
-import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugService, IDebugSession, IExpression, IStackFrame } from 'vs/workbench/contrib/debug/common/debug';
+import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugService, IDebugSession, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 // import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
@@ -162,6 +162,10 @@ export class DeSyntView extends ViewPane {
 		let controller = new AbortController();
 		button.label = buttonLabel;
 		this._register(button.onDidClick(async () => {
+			if (this.debugService.state === State.Inactive) {
+				this.notificationSer.info('Must be in debug mode');
+				return;
+			}
 			if (clicked) {
 				button.label = 'Cancled';
 				controller.abort();
