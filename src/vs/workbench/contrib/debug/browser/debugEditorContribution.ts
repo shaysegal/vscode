@@ -43,7 +43,7 @@ import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
 //import { SnippetString } from 'vs/workbench/api/common/extHostTypes';
 import { FloatingClickWidget } from 'vs/workbench/browser/codeeditor';
-import { suggestedValueAsComment, sketchValueInline } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
+import { sketchValueInline, suggestedValueAsComment } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
@@ -887,12 +887,17 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				}
 				if (current_range.containsPosition(new Position(decoration.line, 1))) {
 
-					if (suggestedValueInline) {
-						const futureValue = await this.getDesyntFutureValue(decoration.line);
-						if (futureValue && futureValue.body && futureValue.body.result) {
-							const futureDecoration = createFutureInlineValueDecoration(decoration.line, futureValue.body.result);
-							allDecorations.push(...futureDecoration);
-						}
+					if (sketchValueInline) {
+						// const futureValue = await this.getDesyntFutureValue(decoration.line);
+						// if (futureValue && futureValue.body && futureValue.body.result) {
+						// 	const futureDecoration = createFutureInlineValueDecoration(decoration.line, futureValue.body.result);
+						// 	allDecorations.push(...futureDecoration);
+						// }
+						const model = this.editor.getModel();
+						const lineVal = model!.getLineContent(decoration.line).trimStart();
+						const sketchDecoration = createInlineSketchDecoration(decoration.line, lineVal?.replace('??', objSyntDict[decoration.line]['output'].at(-1)));
+						allDecorations.push(...sketchDecoration);
+
 						allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
 					}
 				}
