@@ -190,6 +190,7 @@ function createInlineValueDecorationDesynt(lineNumber: number, contentText: stri
 		}
 	];
 }
+/*
 function createFutureInlineValueDecoration(lineNumber: number, contentText: string, column = Constants.MAX_SAFE_SMALL_INTEGER): IModelDeltaDecoration[] {
 	// If decoratorText is too long, trim and add ellipses. This could happen for minified files with everything on a single line
 	if (contentText.length > MAX_INLINE_DECORATOR_LENGTH) {
@@ -216,7 +217,7 @@ function createFutureInlineValueDecoration(lineNumber: number, contentText: stri
 			}
 		}
 	];
-}
+}*/
 function replaceWsWithNoBreakWs(str: string): string {
 	return str.replace(/[ \t]/g, strings.noBreakWhitespace);
 }
@@ -931,7 +932,8 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 					if (sketchValueInline) {
 						const model = this.editor.getModel();
 						const lineVal = model!.getLineContent(sketch_line).trimStart();
-						const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', objSyntDict[sketch_line]['output'].at(-1)));
+						const replacement = objSyntDict[sketch_line]['output'].at(-1);
+						const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', typeof replacement === 'string' ? `'${replacement}'` : replacement));
 						allDecorations.push(...sketchDecoration);
 					}
 				}
