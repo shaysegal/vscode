@@ -1,11 +1,12 @@
+import ast
 import copy
 import inspect
 import pprint
+import re
 import runpy
 from io import open_code
 from sys import argv
-import re
-import ast
+import numpy as np
 
 """
 run code given in codeFile arg and drop statements in ignoreStatementsFile
@@ -15,7 +16,7 @@ based on img-summary.py
 
 class Sketch:
     def __init__(self):
-        self.sketchValue = None 
+        self.sketchValue = None
         # self.suggestedValue = None # To have suggeted value in the sketch hover widget
 
     # Not used
@@ -70,61 +71,87 @@ def ad_hoc_alter__a__(func_name):
     )
     if len(stackframe) == 1:
         current_frame = stackframe[0]
-        return alter__a__(current_frame.lineno, current_frame.frame.f_locals, current_frame.frame.f_globals)
-
+        return alter__a__(
+            current_frame.lineno,
+            current_frame.frame.f_locals,
+            current_frame.frame.f_globals,
+        )
 
     return None
+
 
 """ TODO: do this in one part
     -> Then in the 'HoverVariablesRenderer, once the user inputs a sketch value, locals and this value are added as the input and output for the synt_dict via func update_synt_dict
     -> this should be great
 """
 
+
 def convert_json_localstate(ls):
     d = {}
     for l in ls:
         k, v = re.split(":", l)
-        d[k] = ast.literal_eval(v)
+        if 'array' in v:
+            d[k] = eval(v.replace('array', 'np.array'))  # bit rough but works
+        else:
+            d[k] = ast.literal_eval(v)
     return d
+
 
 def get_preserved_local_state(locals_state):
     preserved_local_state = {}
     for key, value in locals_state.items():
-        if key.startswith("__") or type(value).__name__ == "module": continue
+        if key.startswith("__") or type(value).__name__ == "module":
+            continue
         preserved_local_state[key] = copy.deepcopy(value)
 
     return preserved_local_state
 
+
 def remove_sol_if_override(current_line):
-    if (synt_dict[current_line].get("solution") and synt_dict[current_line].get("overrideValue")):
+    if synt_dict[current_line].get("solution") and synt_dict[current_line].get(
+        "overrideValue"
+    ):
         del synt_dict[current_line]["solution"]
         synt_dict[current_line]["overrideValue"] = None
+
 
 def update_synt_dict(locals_state_json, value, current_line):
     if value is None:
         raise RuntimeError("Cannot set sketchValue to None")
 
-    locals_state = convert_json_localstate(locals_state_json) # don't need preserved as we are already given only the preserved local state
-    
+    locals_state = convert_json_localstate(
+        locals_state_json
+    )  # don't need preserved as we are already given only the preserved local state
+
     if current_line in synt_dict:
         # Grim but works
-        if locals_state in synt_dict[current_line]["input"]:
+        
+        tmp_locals = {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in locals_state.items()}
+        tmp_input = [{k: v.tolist() if isinstance(v, np.ndarray) else v} for d in synt_dict[current_line]["input"] for k, v in d.items()]
+        # I hate this
+
+        if tmp_locals in tmp_input:
             idx = synt_dict[current_line]["input"].index(locals_state)
             synt_dict[current_line]["output"][idx] = value
             return
 
-        if (synt_dict[current_line].get("solution") and value != synt_dict[current_line].get("generated_solution")):
+        if synt_dict[current_line].get("solution") and value != synt_dict[
+            current_line
+        ].get("generated_solution"):
             synt_dict[current_line]["overrideValue"] = value
             sketchValueContainer.sketchValue = value
 
         synt_dict[current_line]["input"].append(locals_state)
         synt_dict[current_line]["output"].append(value)
+        print(synt_dict)
+
     else:
         synt_dict[current_line] = {
             "input": [locals_state],
             "output": [value],
         }
-    
+
+
 # What does this do??
 def try_get_solution(locals_state, globals_state, current_line):
     preserved_local_state = get_preserved_local_state(locals_state)
@@ -149,10 +176,11 @@ def try_get_solution(locals_state, globals_state, current_line):
             e,
         )
 
+
 def alter__a__(current_line, locals_state, globals_state):
     # Should never be reached given code in continuation
-    # if not synt_dict:
-    #     raise AssertionError("Must supply a valid sketch value")
+    if not synt_dict:
+        raise AssertionError("Must supply a valid sketch value")
     if "solution" in synt_dict[current_line]:
         return try_get_solution(locals_state, globals_state, current_line)
     else:
@@ -194,7 +222,10 @@ def _get_code_from_file(run_name, path_name):
         altered_code = str.encode(
             f.read()
             .decode("utf-8")
-            .replace("??", "alter__a__(inspect.currentframe().f_lineno, inspect.currentframe().f_locals, inspect.currentframe().f_globals)")
+            .replace(
+                "??",
+                "alter__a__(inspect.currentframe().f_lineno, inspect.currentframe().f_locals, inspect.currentframe().f_globals)",
+            )
         )
         code = compile(altered_code, path_name, "exec")
     return code, path_name
