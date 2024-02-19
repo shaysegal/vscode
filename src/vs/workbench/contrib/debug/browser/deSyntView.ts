@@ -200,7 +200,7 @@ export class DeSyntView extends ViewPane {
 					//	SyntDictJson = JSON.parse(newSyntDict!.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
 					//}
 					try {
-						if (!SyntDictJson) { throw new Error('No sketches provided'); }
+						if (!Object.keys(SyntDictJson).length) { throw new Error('No sketches provided'); }
 						await this.synthesize(SyntDictJson, session, stackFrame, controller);
 						//await this.sendToSynthesizer(SyntDictJson, controller);
 					} catch (e) {
