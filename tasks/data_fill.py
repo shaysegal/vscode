@@ -1,41 +1,45 @@
 import numpy as np
 import pandas as pd
 
-apple_quality = pd.read_csv("apple_quality.csv", nrows=4000, usecols=range(1, 8))
-apple_quality.astype({col: int for col in apple_quality.columns})
+# apple_quality = pd.read_csv("apple_quality.csv", nrows=4000, usecols=[2, 3, 4, 5, 7])
+# apple_quality = apple_quality.astype({col: int for col in apple_quality.columns})
 
-apple_quality["Quality"] = (
-    apple_quality["Size"]
-    + apple_quality["Weight"]
-    + (3 * apple_quality["Sweetness"])
-    + apple_quality["Crunchiness"]
-    + apple_quality["Juiciness"]
-    + apple_quality["Ripeness"]
-    - apple_quality["Acidity"]
-)
+# apple_quality["Quality"] = (
+#     (apple_quality['Weight'] * apple_quality["Sweetness"])
+#     + apple_quality["Crunchiness"]
+#     + apple_quality["Juiciness"]
+#     - apple_quality["Acidity"]
+# )
+# apple_quality.columns = map(str.lower, apple_quality.columns)
 
-apple_quality.loc[apple_quality.sample(frac=0.2).index, "Quality"] = np.nan
-def push_row
+# train = apple_quality.sample(frac=0.8, random_state=2)
+# prod = apple_quality.drop(train.index).drop("quality", axis=1)
 
-def fill_quality_col(row: pd.Series) -> int: 
-    quality = ??
-    return  qualitys
-# Solution:
-# quality = row[0] + row[1] + (3 * row[2]) + row[3] + row[4] + row[5] - row[6]
+# train.to_csv("apple_train.csv", index=False)
+# prod.to_csv("apple_prod.csv", index=False)
 
-apple_quality.apply(fill_quality_col)
 
-train = apple_quality.sample(frac=0.8, random_state=1)
-test = apple_quality.drop(train.index)
+def push_row(): ...
 
-train = pd.read_csv("train.csv")
 
-for row in train:
-    size,weight,sweet,crunch,juice,ripe,real_quality=row
+train = pd.read_csv("apple_train.csv")
+
+def calc_quality(weight, sweetness, crunchiness, juiciness, acidity) -> int:
     qual = ??
-    if qual != real_qaul
-        print("something wrog")
-prod = pd.read_csv("prod.csv")
-prod["qaul"]=fom..
-def calc(size,weight,sweet,crunch,juice,ripe):
-    qual = ?? == real_quality
+    return qual
+# Solution:
+# quality = (weight * sweetness) + crunchiness + juiciness - acidity
+
+
+def quality_formula(**row) -> int:
+    *cols, given_quality = row.items()
+    qual = calc_quality(**dict(cols))
+    if qual != given_quality[1]:
+        print("something wrong")
+    return qual
+
+
+_ = train.apply(lambda x: quality_formula(**x), axis=1)
+
+prod = pd.read_csv("apple_prod.csv")
+prod["qaul"] = prod.apply(quality_formula)

@@ -1,44 +1,42 @@
 from collections import Counter
-import random
+from itertools import repeat
 
-nouns = ["puppy", "car", "rabbit", "girl", "monkey"] * 7
-adj = ["adorable", "clueless", "dirty", "odd", "stupid"] * 7
-punc = ['.']* 7
 
-l = nouns + adj + punc 
-random.shuffle(l)
-test_str = " ".join(l[:100])
+text =  "Twas brillig and the slithy tove\nDid gyre and gimble in the wabe\nAll mimsy were the borogoves\nAnd the mome raths outgrabe\nBeware the Jabberwock my son\nThe jaws that bite the claws that catch\nBeware the Jubjub bird and shun\nThe frumious Bandersnatch"
+
 
 
 """
 Goal is to keep the sentence the same length, replacing each word/punctuation by the number of times it appears in the paragraph
 """
 
-class RefromSentences:
-    def __init__(self, text) -> None:
-        # self.text_file = text
-        # with open(text, 'r') as f: 
-        #     self.text = f.read()
-        self.text = text
-        self.word_count = Counter()
+def reformat(s: str, top_word: str, replacement: str, num_words: int) -> str:
+    r = ??
+    return r
+# Solution
+# s = " ".join(s.replace(top_word, replacement, num_words).split(" ")[0:num_words])
 
+
+class RefromSentences:
+    def __init__(self) -> None:
+        self.word_count = Counter()
     
     # remove the rightmost most instance of the most popular word so far
-    def reformat(self):
+    def modify_text(self, text: str) -> str:
         new_text = ""
-        for s in self.text.split('.'):
+        for s in text.split('\n'):
+            num_words = len(s.split())
+            self.word_count += Counter(word for word in s.split(' '))
+            (top_word, word_count) = self.word_count.most_common()[0]
 
-            self.word_count += Counter({w: s.count(w) for w in set(s.split(' ')) if w != ''})
-            current_top_word = max(self.word_count, key=self.word_count.get)
-
-            # s = ??
-            s = "".join(s.rsplit(" " + current_top_word, 1))
-            new_text += (". " + s)
+            s = reformat(s, top_word+' ', (top_word+' ')*word_count, num_words)
+            # new_text += (". " + s)
 
         return new_text
 
-if __name__ == "__main__":
-    rs = RefromSentences(test_str)
-    new_text = rs.reformat()
-    print("\n".join(rs.text.split(".")))
-    print("\n".join(new_text.split(".")))
+# if __name__ == "__main__":
+rs = RefromSentences()
+new_text = rs.modify_text(text)
+
+print(text)
+print(new_text)

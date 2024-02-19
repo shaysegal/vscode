@@ -8,10 +8,10 @@ from matplotlib.patches import Circle
 
 np.random.seed(4)
 
+# TODO: Requires numpy functions for synthesis
 
 def ensure_inbounds(positions: npt.NDArray, diameter: int, bounds: list[int]):
     inbound_positions = ??
-    # inbound_positions = positions
     return inbound_positions
 # Possible Solution
 # inbound_positions = np.clip(positions, 1, np.subtract(bounds, 1)[1]).tolist()

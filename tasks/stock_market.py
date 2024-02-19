@@ -6,11 +6,23 @@ class StockMarketTradingSystem:
 
     @staticmethod
     @rotated_decorator
-    def rotated(c, n):
-        rotated_code = ??
-        return rotated_code
+    def mirrored(c):
+        mirrored = 0
+        while c:
+            mirrored = ??
+            c >>= 1
+        # rotated_code = ??
+        return mirrored
     # Solution
-    # rotated_code = (c >> n) | c << (c.bit_length() - n)
+    # rotated_code = (mirrored << 1) + (c & 1)
+
+    # @staticmethod
+    # @rotated_decorator
+    # def rotated(c, n):
+    #     rotated_code = ??
+    #     return rotated_code
+    # # rotated_code = (c >> n) | c << (c.bit_length() - n)
+
 
     def check_secure(self):
         val = ""
