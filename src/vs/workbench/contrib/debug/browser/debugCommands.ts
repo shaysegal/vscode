@@ -650,14 +650,16 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const instantiationService = accessor.get(IInstantiationService);
 		const storageService = accessor.get(IStorageService);
 		const localDesyntView = createLocalDesyntView(accessor);
+		let onSketch = false;
 
 		// This is horrible but works for now
 		const sf = debugService.getViewModel().focusedStackFrame;
 		if (sf) {
-			if (!debugService.validDesynt) {
+			if (codeEditor) {
 				const currentLine = sf.range.startLineNumber;
-				if (codeEditor) {
-					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean
+				if (!debugService.validDesynt) {
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 					if (currentCodeLine && currentCodeLine.includes('??') && !codeEditorContribution.exceptionWidget) {
 						const debugSession = debugService.getViewModel().focusedSession;
@@ -667,50 +669,58 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 						// This is bad I know
 						codeEditorContribution.exceptionWidget = exceptionWidget;
 						codeEditorContribution.showExceptionWidget(exceptionInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
-					}
-					return;
-				}
-			} else {
-				// If user continues with same sketch value, we want to capture that in the desynt history view
-				storageService.desyntIteration += 1;
-				const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
-				const value = storageService.get(desiredKey, StorageScope.APPLICATION);
-				if (value === undefined && storageService.desyntIteration > 0) {
-					const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
-					storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
-				}
-
-				if (doesTrigger) {
-					if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-						await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
-					} else {
-						await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
-					}
-					return;
-				}
-				if (codeEditor && sf) {
-					const currentLine = sf.range.startLineNumber;
-					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-					if (currentCodeLine && currentCodeLine.includes('??')) {
-						const session = await debugService.getViewModel().focusedSession;
-
-						// If user does not change value then need to do something
-
-						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
-						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
-						// TOODO: Leads to error for desynt synthesis
-						if (localDesyntView.solution && triggerlessExtraBreakpoint) {
-							await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
-						}
+						return;
 					}
 				}
-
+			}
+			if (!onSketch) {
 				if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
 					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
 				} else {
 					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
 				}
+				return;
 			}
+			// If user continues with same sketch value, we want to capture that in the desynt history view
+			storageService.desyntIteration += 1;
+			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
+			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
+			if (value === undefined && storageService.desyntIteration > 0) {
+				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
+				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+			}
+
+			if (doesTrigger) {
+				if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
+				} else {
+					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
+				}
+				return;
+			}
+			if (codeEditor && sf) {
+				const currentLine = sf.range.startLineNumber;
+				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				if (currentCodeLine && currentCodeLine.includes('??')) {
+					const session = await debugService.getViewModel().focusedSession;
+
+					// If user does not change value then need to do something
+
+					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+					// TOODO: Leads to error for desynt synthesis
+					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
+						await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
+					}
+				}
+			}
+
+			if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+				await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
+			} else {
+				await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
+			}
+
 		}
 	}
 
@@ -737,73 +747,81 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 
 		// This is horrible but works for now
 		const sf = debugService.getViewModel().focusedStackFrame;
+
 		if (sf) {
+			const currentLine = sf.range.startLineNumber;
+			if (codeEditor) {
+
+				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean
+			}
 			if (!debugService.validDesynt) {
-				const currentLine = sf.range.startLineNumber;
+
 				if (codeEditor) {
 					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
-					if (currentCodeLine && currentCodeLine.includes('??') && !codeEditorContribution.exceptionWidget) {
+					if (onSketch && !codeEditorContribution.exceptionWidget) {
 						const debugSession = debugService.getViewModel().focusedSession;
 						const exceptionInfo: IExceptionInfo = { description: 'Must supply a valid sketch value', breakMode: null };
 
 						const exceptionWidget = instantiationService.createInstance(ExceptionWidget, codeEditor!, exceptionInfo, debugSession);
 						// This is bad I know
 						codeEditorContribution.exceptionWidget = exceptionWidget;
-						codeEditorContribution.showExceptionWidget(exceptionInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
+						codeEditorContribution.showExceptionWidget(exceptionInfo, debugSession, currentLine, currentCodeLine!.indexOf('??') + 1);
+						return;
 					}
-					return;
-				}
-			} else {
-				// If user continues with same sketch value, we want to capture that in the desynt history view
-				storageService.desyntIteration += 1;
-				const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
-				const value = storageService.get(desiredKey, StorageScope.APPLICATION);
-				if (value === undefined && storageService.desyntIteration > 0) {
-					const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
-					storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
-				}
 
-				if (doesTrigger) {
-					if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-						await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
-					} else {
-						await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
-					}
-					return;
 				}
-				if (codeEditor && sf) {
-					const currentLine = sf.range.startLineNumber;
-					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-					if (currentCodeLine && currentCodeLine.includes('??')) {
-						onSketch = true;
-						const session = await debugService.getViewModel().focusedSession;
-						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
-						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
-						// TOODO: Leads to error for desynt synthesis
-						if (localDesyntView.solution && triggerlessExtraBreakpoint) {
-							await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
-						}
-					}
-				}
-				if (!onSketch) {
-					if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-						await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.stepIn('instruction'));
-					} else {
-						await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.stepIn());
-
-					}
-					return;
-				}
-
-				// we are on sketch , change it to step over !
+			}
+			if (!onSketch) {
 				if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
+					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.stepIn('instruction'));
 				} else {
-					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
+					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.stepIn());
 				}
 				return;
 			}
+			// If user continues with same sketch value, we want to capture that in the desynt history view
+			storageService.desyntIteration += 1;
+			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
+			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
+			if (value === undefined && storageService.desyntIteration > 0) {
+				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
+				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+			}
+
+			if (doesTrigger) {
+				if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
+				} else {
+					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
+				}
+				return;
+			}
+			if (codeEditor && sf) {
+				const currentLine = sf.range.startLineNumber;
+				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				if (currentCodeLine && currentCodeLine.includes('??')) {
+					onSketch = true;
+					const session = await debugService.getViewModel().focusedSession;
+					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+					// TOODO: Leads to error for desynt synthesis
+					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
+						await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
+					}
+				}
+			}
+
+
+			// we are on sketch , change it to step over !
+			if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
+				await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
+			} else {
+				await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
+			}
+			return;
+
 		}
 	}
 
@@ -1014,14 +1032,16 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const instantiationService = accessor.get(IInstantiationService);
 		const storageService = accessor.get(IStorageService);
 		const localDesyntView = createLocalDesyntView(accessor);
-
+		let onSketch = false
 		// This is horrible but works for now
 		const sf = debugService.getViewModel().focusedStackFrame;
 		if (sf) {
-			if (!debugService.validDesynt) {
+			if (codeEditor) {
 				const currentLine = sf.range.startLineNumber;
-				if (codeEditor) {
-					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean
+				if (!debugService.validDesynt) {
+
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 					if (currentCodeLine && currentCodeLine.includes('??') && !codeEditorContribution.exceptionWidget) {
 						const debugSession = debugService.getViewModel().focusedSession;
@@ -1031,42 +1051,46 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 						// This is bad I know
 						codeEditorContribution.exceptionWidget = exceptionWidget;
 						codeEditorContribution.showExceptionWidget(exceptionInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
-					}
-					return;
-				}
-			} else {
-				// If user continues with same sketch value, we want to capture that in the desynt history view
-				storageService.desyntIteration += 1;
-				const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
-				const value = storageService.get(desiredKey, StorageScope.APPLICATION);
-				if (value === undefined && storageService.desyntIteration > 0) {
-					const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
-					storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
-				}
-
-				if (doesTrigger) {
-					await getThreadAndRun(accessor, context, thread => thread.continue());
-					return;
-				}
-				if (codeEditor && sf) {
-					const currentLine = sf.range.startLineNumber;
-					const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-					if (currentCodeLine && currentCodeLine.includes('??')) {
-						const session = await debugService.getViewModel().focusedSession;
-
-						// If user does not change value then need to do something
-
-						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
-						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
-						// TOODO: Leads to error for desynt synthesis
-						if (localDesyntView.solution && triggerlessExtraBreakpoint) {
-							await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
-						}
+						return;
 					}
 				}
-
-				await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 			}
+			if (!onSketch) {
+				await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
+				return
+			}
+			// If user continues with same sketch value, we want to capture that in the desynt history view
+			storageService.desyntIteration += 1;
+			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
+			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
+			if (value === undefined && storageService.desyntIteration > 0) {
+				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
+				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+			}
+
+			if (doesTrigger) {
+				await getThreadAndRun(accessor, context, thread => thread.continue());
+				return;
+			}
+			if (codeEditor && sf) {
+				const currentLine = sf.range.startLineNumber;
+				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
+				if (currentCodeLine && currentCodeLine.includes('??')) {
+					const session = await debugService.getViewModel().focusedSession;
+
+					// If user does not change value then need to do something
+
+					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+					// TOODO: Leads to error for desynt synthesis
+					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
+						await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
+					}
+				}
+			}
+
+			await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
+
 		}
 	}
 

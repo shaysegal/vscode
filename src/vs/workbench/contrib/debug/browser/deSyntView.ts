@@ -206,7 +206,7 @@ export class DeSyntView extends ViewPane {
 					} catch (e) {
 						if (e.message === 'Cancled') {
 							this.notificationSer.info('Cancled');
-						} else if (e.message = 'No sketches provided') {
+						} else if (e.message === 'No sketches provided') {
 							this.notificationSer.info('No sketches provided');
 						}
 						else {
