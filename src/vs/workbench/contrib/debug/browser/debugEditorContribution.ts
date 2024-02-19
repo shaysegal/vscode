@@ -933,7 +933,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 						const model = this.editor.getModel();
 						const lineVal = model!.getLineContent(sketch_line).trimStart();
 						const replacement = objSyntDict[sketch_line]['output'].at(-1);
-						const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', typeof replacement === 'string' ? `'${replacement}'` : replacement));
+						const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', JSON.stringify(replacement)));
 						allDecorations.push(...sketchDecoration);
 					}
 				}
