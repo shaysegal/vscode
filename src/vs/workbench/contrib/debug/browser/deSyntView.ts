@@ -37,7 +37,7 @@ import { SynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, Sythesi
 import { watchExpressionsAdd, watchExpressionsRemoveAll } from 'vs/workbench/contrib/debug/browser/debugIcons';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { VariablesRenderer, updateForgetScopes, } from 'vs/workbench/contrib/debug/browser/variablesView';
-import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugService, IDebugSession, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
+import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugEditorContribution, IDebugService, IDebugSession, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 // import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
@@ -111,7 +111,7 @@ export class DeSyntView extends ViewPane {
 		}
 		return undefined;
 	}
-	async synthesize(SyntDictJson: Object, session: IDebugSession, stackFrame: IStackFrame, controller: AbortController) {
+	async synthesize(SyntDictJson: Object, session: IDebugSession, stackFrame: IStackFrame, controller: AbortController, codeEditorContribution?: IDebugEditorContribution) {
 		if (Object.keys(SyntDictJson).length === 0) {//empty object
 			await this.ad_hoc_alter_val(session, stackFrame);
 			const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
@@ -121,7 +121,7 @@ export class DeSyntView extends ViewPane {
 
 		const updateEvaluation = `remove_sol_if_override(${stackFrame.range.startLineNumber})`;
 		await session.evaluate(updateEvaluation, stackFrame.frameId);
-		await this.sendToSynthesizer(SyntDictJson, controller);
+		await this.sendToSynthesizer(SyntDictJson, controller, codeEditorContribution);
 		return;
 	}
 	protected override renderBody(container: HTMLElement): void {
@@ -354,7 +354,7 @@ export class DeSyntView extends ViewPane {
 			getActionsContext: () => element && selection.includes(element) ? selection : element ? [element] : [],
 		});
 	}
-	private async sendToSynthesizer(variablesData: Object, controller: AbortController) {
+	private async sendToSynthesizer(variablesData: Object, controller: AbortController, codeEditorContribution?: IDebugEditorContribution) {
 		const signal = controller.signal;
 		const uri = new URL(`${SynthesizerUrl}:${SynthesizerPort}/${SythesisRequestRoute}`);
 		const sto = setTimeout(() => { timedout = true; controller.abort(); }, SynthesisTimeoutInMiliSeconds);
@@ -380,6 +380,10 @@ export class DeSyntView extends ViewPane {
 				console.log('unkown error');
 			}
 
+		}).finally(() => {
+			if (codeEditorContribution) {
+				codeEditorContribution.closeTriggerlessWidget();
+			}
 		});
 		clearTimeout(sto);
 		if (timedout) {

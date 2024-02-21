@@ -51,6 +51,7 @@ import { VIEWLET_ID as EXTENSIONS_VIEWLET_ID, IExtensionsViewPaneContainer } fro
 import { TEXT_FILE_EDITOR_ID } from 'vs/workbench/contrib/files/common/files';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IPaneCompositePartService } from 'vs/workbench/services/panecomposite/browser/panecomposite';
+import { ITriggerlessInfo } from './triggerlessWidget';
 
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
@@ -658,7 +659,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			if (codeEditor) {
 				const currentLine = sf.range.startLineNumber;
 				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean
+				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean;
 				if (!debugService.validDesynt) {
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 					if (currentCodeLine && currentCodeLine.includes('??') && !codeEditorContribution.exceptionWidget) {
@@ -703,10 +704,10 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
 				if (currentCodeLine && currentCodeLine.includes('??')) {
 					const session = await debugService.getViewModel().focusedSession;
+					const debugSession = debugService.getViewModel().focusedSession!;
+					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 
-					// If user does not change value then need to do something
-
-					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
 					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
 					// TOODO: Leads to error for desynt synthesis
 					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
@@ -753,7 +754,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			if (codeEditor) {
 
 				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean
+				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean;
 			}
 			if (!debugService.validDesynt) {
 
@@ -804,7 +805,11 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				if (currentCodeLine && currentCodeLine.includes('??')) {
 					onSketch = true;
 					const session = await debugService.getViewModel().focusedSession;
-					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+
+					const debugSession = debugService.getViewModel().focusedSession!;
+					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
+
+					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
 					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
 					// TOODO: Leads to error for desynt synthesis
 					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
@@ -992,7 +997,7 @@ function createLocalDesyntView(accessor: ServicesAccessor): DeSyntView {
 	const progressService = accessor.get(IProgressService);
 	return new DeSyntView({ id: DESYNT_VIEW_ID, title: 'desyntView' }, contextMenuService, debugService, keybindingService, instantiationService, viewDescriptorService, configurationService, contextKeyService, openerService, themeService, telemetryService, menuService, notificationService, progressService);
 }
-async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number) {
+async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackFrame, localDesyntView: DeSyntView, lineNumber: number, codeEditorContribution: IDebugEditorContribution, debugSession: IDebugSession, currentLine: number, currentCodeLine: string) {
 	const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 	const SyntDict = await session!.evaluate(syntDictEvaluation, stackFrame.frameId);
 	if (SyntDict) {
@@ -1009,13 +1014,19 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 			return;
 		}
 
+		// const triggerlessInfo: ITriggerlessInfo = { description: 'Synthesizing', breakMode: null };
+		// codeEditorContribution.showTriggerlessWidget(triggerlessInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
+		// localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
+
 		localDesyntView.progressSer.withProgress({
-			location: ProgressLocation.Notification,
+			location: ProgressLocation.Explorer,
 			delay: 750,
 			title: nls.localize('synthesizingSketch', "Running synthesizer..."),
 			cancellable: false,
 		}, async () => { // task
-			return await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
+			const triggerlessInfo: ITriggerlessInfo = { description: 'Synthesizing', breakMode: null };
+			codeEditorContribution.showTriggerlessWidget(triggerlessInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
+			await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController(), codeEditorContribution);
 		});
 	}
 }
@@ -1032,14 +1043,14 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const instantiationService = accessor.get(IInstantiationService);
 		const storageService = accessor.get(IStorageService);
 		const localDesyntView = createLocalDesyntView(accessor);
-		let onSketch = false
+		let onSketch = false;
 		// This is horrible but works for now
 		const sf = debugService.getViewModel().focusedStackFrame;
 		if (sf) {
 			if (codeEditor) {
 				const currentLine = sf.range.startLineNumber;
 				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
-				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean
+				onSketch = (currentCodeLine && currentCodeLine.includes('??')) as boolean;
 				if (!debugService.validDesynt) {
 
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
@@ -1057,7 +1068,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			}
 			if (!onSketch) {
 				await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
-				return
+				return;
 			}
 			// If user continues with same sketch value, we want to capture that in the desynt history view
 			storageService.desyntIteration += 1;
@@ -1076,11 +1087,14 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				const currentLine = sf.range.startLineNumber;
 				const currentCodeLine = codeEditor.getModel()?.getLineContent(currentLine);
 				if (currentCodeLine && currentCodeLine.includes('??')) {
-					const session = await debugService.getViewModel().focusedSession;
+					const session = debugService.getViewModel().focusedSession;
 
 					// If user does not change value then need to do something
+					const debugSession = debugService.getViewModel().focusedSession!;
+					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 
-					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine);
+					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
+
 					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
 					// TOODO: Leads to error for desynt synthesis
 					if (localDesyntView.solution && triggerlessExtraBreakpoint) {

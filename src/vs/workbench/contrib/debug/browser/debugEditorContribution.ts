@@ -47,6 +47,7 @@ import { sketchValueInline, suggestedValueAsComment } from 'vs/workbench/contrib
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
+import { ITriggerlessInfo, TriggerlessWidget } from 'vs/workbench/contrib/debug/browser/triggerlessWidget';
 import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
@@ -320,6 +321,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private gutterIsHovered = false;
 
 	public exceptionWidget: ExceptionWidget | undefined;
+	public triggerlessWidget: TriggerlessWidget | undefined;
 	private configurationWidget: FloatingClickWidget | undefined;
 	private altListener: IDisposable | undefined;
 	private altPressed = false;
@@ -634,6 +636,34 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			this.exceptionWidget.dispose();
 			this.exceptionWidget = undefined;
 			this.exceptionWidgetVisible.set(false);
+			if (shouldFocusEditor) {
+				this.editor.focus();
+			}
+		}
+	}
+
+
+	public showTriggerlessWidget(triggerlessInfo: ITriggerlessInfo, debugSession: IDebugSession | undefined, lineNumber: number, column: number): void {
+		if (this.triggerlessWidget) {
+			this.triggerlessWidget.dispose();
+		}
+
+		this.triggerlessWidget = this.instantiationService.createInstance(TriggerlessWidget, this.editor, triggerlessInfo);
+		this.triggerlessWidget.show({ lineNumber, column }, 0);
+		this.triggerlessWidget.focus();
+		this.editor.revealRangeInCenter({
+			startLineNumber: lineNumber,
+			startColumn: column,
+			endLineNumber: lineNumber,
+			endColumn: column,
+		});
+	}
+
+	public closeTriggerlessWidget(): void {
+		if (this.triggerlessWidget) {
+			const shouldFocusEditor = this.triggerlessWidget.hasFocus();
+			this.triggerlessWidget.dispose();
+			this.triggerlessWidget = undefined;
 			if (shouldFocusEditor) {
 				this.editor.focus();
 			}
