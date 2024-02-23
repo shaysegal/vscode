@@ -996,13 +996,13 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	private async getDesyntFutureValue(line_number: number): Promise<DebugProtocol.EvaluateResponse | undefined> {
 		const session = this.debugService.getViewModel().focusedSession;
 		const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
-		const scopes = await focusedStackFrame?.getScopes();
-		const localScope = await scopes!.
-			find(s => s.name === 'Locals')?.
-			getChildren()!;
-		const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
-		const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
-		const evaluation = `ad_hoc_eval_solution(${line_number}, ${locals})`;
+		// const scopes = await focusedStackFrame?.getScopes();
+		// const localScope = await scopes!.
+		// 	find(s => s.name === 'Locals')?.
+		// 	getChildren()!;
+		// const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
+		// const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
+		const evaluation = `ad_hoc_eval_solution(${line_number}, locals())`;
 		if (session && focusedStackFrame) {
 			const evaluationResult = await session.evaluate(evaluation, focusedStackFrame.frameId);
 			if (evaluationResult) {
