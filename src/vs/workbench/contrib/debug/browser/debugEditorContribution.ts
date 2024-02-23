@@ -47,7 +47,7 @@ import { sketchValueInline, suggestedValueAsComment } from 'vs/workbench/contrib
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
-import { ITriggerlessInfo, TriggerlessWidget } from 'vs/workbench/contrib/debug/browser/triggerlessWidget';
+import { TriggerlessWidget } from 'vs/workbench/contrib/debug/browser/triggerlessWidget';
 import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
@@ -643,12 +643,12 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	}
 
 
-	public showTriggerlessWidget(triggerlessInfo: ITriggerlessInfo, debugSession: IDebugSession | undefined, lineNumber: number, column: number): void {
+	public showTriggerlessWidget(lineNumber: number, column: number): void {
 		if (this.triggerlessWidget) {
 			this.triggerlessWidget.dispose();
 		}
 
-		this.triggerlessWidget = this.instantiationService.createInstance(TriggerlessWidget, this.editor, triggerlessInfo);
+		this.triggerlessWidget = this.instantiationService.createInstance(TriggerlessWidget, this.editor);
 		this.triggerlessWidget.show({ lineNumber, column }, 0);
 		this.triggerlessWidget.focus();
 		this.editor.revealRangeInCenter({
@@ -892,13 +892,14 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			allDecorations = distinct(decorationsPerScope.reduce((previous, current) => previous.concat(current), []),
 				// Deduplicate decorations since same variable can appear in multiple scopes, leading to duplicated decorations #129770
 				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
-			if (SyntDict && JSON.stringify(SyntDict) !== '{}') {
+			if (SyntDict && JSON.stringify(SyntDict) !== '{}' && stackFrame.range.startLineNumber in SyntDict) {
 				await this.addDesyntInsightToDecorations(SyntDict, allDecorations, stackFrame.range as Range);
 			}
 		}
 
 		this.oldDecorations.set(allDecorations);
 	}
+
 	private async addDesyntInsightToDecorations(SyntDict: DebugProtocol.EvaluateResponse, allDecorations: IModelDeltaDecoration[], current_range: Range): Promise<void> {
 		const solutionKey = 'solution';
 		const allDecorationsLineAndColumn = allDecorations.map(decoration => {
@@ -993,11 +994,17 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	}
 
 	private async getDesyntFutureValue(line_number: number): Promise<DebugProtocol.EvaluateResponse | undefined> {
-		const session = await this.debugService.getViewModel().focusedSession;
-		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
-		const evaluation = `ad_hoc_eval_solution(${line_number},locals())`;
-		if (session && stackFrame) {
-			const evaluationResult = await session.evaluate(evaluation, stackFrame.frameId);
+		const session = this.debugService.getViewModel().focusedSession;
+		const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
+		const scopes = await focusedStackFrame?.getScopes();
+		const localScope = await scopes!.
+			find(s => s.name === 'Locals')?.
+			getChildren()!;
+		const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
+		const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
+		const evaluation = `ad_hoc_eval_solution(${line_number}, ${locals})`;
+		if (session && focusedStackFrame) {
+			const evaluationResult = await session.evaluate(evaluation, focusedStackFrame.frameId);
 			if (evaluationResult) {
 				return evaluationResult;
 			}

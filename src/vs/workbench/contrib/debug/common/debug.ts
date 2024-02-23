@@ -1170,7 +1170,7 @@ export interface IDebugEditorContribution extends editorCommon.IEditorContributi
 	showHover(range: Position, focus: boolean): Promise<void>;
 	addLaunchConfiguration(): Promise<any>;
 	closeExceptionWidget(): void;
-	showTriggerlessWidget(triggerlessInfo: any, debugSession: IDebugSession | undefined, lineNumber: number, column: number): void;
+	showTriggerlessWidget(lineNumber: number, column: number): void;
 	closeTriggerlessWidget(): void;
 }
 

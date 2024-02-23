@@ -51,7 +51,6 @@ import { VIEWLET_ID as EXTENSIONS_VIEWLET_ID, IExtensionsViewPaneContainer } fro
 import { TEXT_FILE_EDITOR_ID } from 'vs/workbench/contrib/files/common/files';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IPaneCompositePartService } from 'vs/workbench/services/panecomposite/browser/panecomposite';
-import { ITriggerlessInfo } from './triggerlessWidget';
 
 
 export const ADD_CONFIGURATION_ID = 'debug.addConfiguration';
@@ -1014,18 +1013,13 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 			return;
 		}
 
-		// const triggerlessInfo: ITriggerlessInfo = { description: 'Synthesizing', breakMode: null };
-		// codeEditorContribution.showTriggerlessWidget(triggerlessInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
-		// localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController());
-
 		localDesyntView.progressSer.withProgress({
 			location: ProgressLocation.Explorer,
 			delay: 750,
 			title: nls.localize('synthesizingSketch', "Running synthesizer..."),
 			cancellable: false,
 		}, async () => { // task
-			const triggerlessInfo: ITriggerlessInfo = { description: 'Synthesizing', breakMode: null };
-			codeEditorContribution.showTriggerlessWidget(triggerlessInfo, debugSession, currentLine, currentCodeLine.indexOf('??') + 1);
+			codeEditorContribution.showTriggerlessWidget(currentLine, currentCodeLine.indexOf('??') + 1);
 			await localDesyntView.synthesize(SyntDictJson, session!, stackFrame, new AbortController(), codeEditorContribution);
 		});
 	}

@@ -589,7 +589,8 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 							const localScope = await scopes!.
 								find(s => s.name === 'Locals')?.
 								getChildren()!;
-							const locals = JSON.stringify(localScope.map(l => l.toString()));
+							const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
+							const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
 
 							if (session && focusedStackFrame && wrapperFrame) {
 								const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;

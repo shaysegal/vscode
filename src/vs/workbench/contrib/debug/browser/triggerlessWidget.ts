@@ -25,19 +25,12 @@ const $ = dom.$;
 const debugTriggerlessWidgetBorder = registerColor('debugTriggerlessWidget.border', { dark: '#a31515', light: '#a31515', hcDark: '#a31515', hcLight: '#a31515' }, nls.localize('debugTriggerlessWidgetBorder', 'Triggerless widget border color.'));
 const debugTriggerlessWidgetBackground = registerColor('debugTriggerlessWidget.background', { dark: '#0b0b42', light: '#dedff1', hcDark: '#0d0b42', hcLight: '#dedff1' }, nls.localize('debugTriggerlessWidgetBackground', 'Triggerless widget background color.'));
 
-export interface ITriggerlessInfo {
-	readonly id?: string;
-	readonly description?: string;
-	readonly breakMode: string | null;
-}
-
 export class TriggerlessWidget extends ZoneWidget {
 
 	private backgroundColor: Color | undefined;
 
 	constructor(
 		editor: ICodeEditor,
-		private triggerlessInfo: ITriggerlessInfo,
 		@IThemeService themeService: IThemeService,
 	) {
 		super(editor, { showFrame: true, showArrow: true, isAccessible: true, frameWidth: 1, className: 'triggerless-widget-container' });
@@ -72,15 +65,15 @@ export class TriggerlessWidget extends ZoneWidget {
 		// Set the font size and line height to the one from the editor configuration.
 		const fontInfo = this.editor.getOption(EditorOption.fontInfo);
 		container.style.fontSize = `${fontInfo.fontSize}px`;
-		container.style.lineHeight = `${fontInfo.lineHeight}px`;
+		container.style.lineHeight = `${fontInfo.lineHeight / 4}px`;
 		container.tabIndex = 0;
 		const title = $('.title');
 		const label = $('.label');
 		dom.append(title, label);
 		const actions = $('.actions');
 		dom.append(title, actions);
-		label.textContent = this.triggerlessInfo.id ? nls.localize('exceptionThrownWithId', 'Triggerless Synthesis: {0}', this.triggerlessInfo.id) : nls.localize('exceptionThrown', 'Triggerless Synthesis.');
-		let ariaLabel = label.textContent;
+		label.textContent = nls.localize('exceptionThrown', 'Synthesizing...');
+		const ariaLabel = label.textContent;
 
 		const actionBar = new ActionBar(actions);
 		actionBar.push(new Action('editor.closeTriggerlessWidget', nls.localize('close', "Close"), ThemeIcon.asClassName(widgetClose), true, async () => {
@@ -90,12 +83,12 @@ export class TriggerlessWidget extends ZoneWidget {
 
 		dom.append(container, title);
 
-		if (this.triggerlessInfo.description) {
-			const description = $('.description');
-			description.textContent = this.triggerlessInfo.description;
-			ariaLabel += ', ' + this.triggerlessInfo.description;
-			dom.append(container, description);
-		}
+		// if (this.triggerlessInfo.description) {
+		// 	const description = $('.description');
+		// 	description.textContent = this.triggerlessInfo.description;
+		// 	ariaLabel += ', ' + this.triggerlessInfo.description;
+		// 	dom.append(container, description);
+		// }
 
 		container.setAttribute('aria-label', ariaLabel);
 	}
