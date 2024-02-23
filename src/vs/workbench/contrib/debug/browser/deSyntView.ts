@@ -120,7 +120,11 @@ export class DeSyntView extends ViewPane {
 		}
 
 		const updateEvaluation = `remove_sol_if_override(${stackFrame.range.startLineNumber})`;
-		await session.evaluate(updateEvaluation, stackFrame.frameId);
+		try {
+			await session.evaluate(updateEvaluation, stackFrame.frameId);
+		} catch (ex) {
+			console.log("got exception on 'remove_sol_if_override', might cause a problem", ex)
+		}
 		await this.sendToSynthesizer(SyntDictJson, controller, codeEditorContribution);
 		return;
 	}
@@ -397,15 +401,19 @@ export class DeSyntView extends ViewPane {
 		}
 		const json = await res.json();
 		console.log(json);
-
+		
 		if (json.program) {
 			this.solution = true;
 			const programDetails = json.program;
 			//const pattern = '??';
 			this.candidateExist.set(true);
-			updateForgetScopes(false);
-			this.debugService.getViewModel().updateViews();
-			await this.updateDebugger(programDetails.line, programDetails.synthesized_program);
+			await this.updateDebugger(programDetails.line, programDetails.synthesized_program).then(async () => {
+				await new Promise(resolve => {
+					setTimeout(resolve, 500);
+				});
+				updateForgetScopes(false);
+				this.debugService.getViewModel().updateViews();
+			});
 		}
 	}
 	private async updateDebugger(line: number, program: string) {
