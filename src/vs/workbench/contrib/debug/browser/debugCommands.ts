@@ -1088,7 +1088,9 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 
 					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
-
+					await new Promise(resolve => {
+						setTimeout(resolve, 500);
+					});
 					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
 					// TOODO: Leads to error for desynt synthesis
 					if (localDesyntView.solution && triggerlessExtraBreakpoint) {

@@ -401,7 +401,7 @@ export class DeSyntView extends ViewPane {
 		}
 		const json = await res.json();
 		console.log(json);
-		
+
 		if (json.program) {
 			this.solution = true;
 			const programDetails = json.program;
@@ -409,7 +409,7 @@ export class DeSyntView extends ViewPane {
 			this.candidateExist.set(true);
 			await this.updateDebugger(programDetails.line, programDetails.synthesized_program).then(async () => {
 				await new Promise(resolve => {
-					setTimeout(resolve, 500);
+					setTimeout(resolve, 750);
 				});
 				updateForgetScopes(false);
 				this.debugService.getViewModel().updateViews();
