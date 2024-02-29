@@ -10,13 +10,14 @@ import { CancellationToken, CancellationTokenSource } from 'vs/base/common/cance
 import { canceled } from 'vs/base/common/errors';
 import { Emitter, Event } from 'vs/base/common/event';
 import { normalizeDriveLetter } from 'vs/base/common/labels';
-import { DisposableStore, dispose, IDisposable, MutableDisposable } from 'vs/base/common/lifecycle';
+import { DisposableStore, IDisposable, MutableDisposable, dispose } from 'vs/base/common/lifecycle';
 import { mixin } from 'vs/base/common/objects';
 import * as platform from 'vs/base/common/platform';
 import * as resources from 'vs/base/common/resources';
 import Severity from 'vs/base/common/severity';
 import { URI } from 'vs/base/common/uri';
 import { generateUuid } from 'vs/base/common/uuid';
+import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 import { IPosition, Position } from 'vs/editor/common/core/position';
 import { localize } from 'vs/nls';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -27,8 +28,10 @@ import { ICustomEndpointTelemetryService, ITelemetryService, TelemetryLevel } fr
 import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity';
 import { IWorkspaceContextService, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { ViewContainerLocation } from 'vs/workbench/common/views';
+import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
+import { HandleSolutionWidget } from 'vs/workbench/contrib/debug/browser/handleSolutionWidget';
 import { RawDebugSession } from 'vs/workbench/contrib/debug/browser/rawDebugSession';
-import { AdapterEndEvent, IBreakpoint, IConfig, IDataBreakpoint, IDebugConfiguration, IDebugger, IDebugService, IDebugSession, IDebugSessionOptions, IExceptionBreakpoint, IExceptionInfo, IExpression, IFunctionBreakpoint, IInstructionBreakpoint, IMemoryRegion, IRawModelUpdate, IRawStoppedDetails, IReplElement, IReplElementSource, IStackFrame, IThread, LoadedSourceEvent, State, VIEWLET_ID } from 'vs/workbench/contrib/debug/common/debug';
+import { AdapterEndEvent, EDITOR_CONTRIBUTION_ID, IBreakpoint, IConfig, IDataBreakpoint, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IDebugSessionOptions, IDebugger, IExceptionBreakpoint, IExceptionInfo, IExpression, IFunctionBreakpoint, IInstructionBreakpoint, IMemoryRegion, IRawModelUpdate, IRawStoppedDetails, IReplElement, IReplElementSource, IStackFrame, IThread, LoadedSourceEvent, State, VIEWLET_ID } from 'vs/workbench/contrib/debug/common/debug';
 import { DebugCompoundRoot } from 'vs/workbench/contrib/debug/common/debugCompoundRoot';
 import { DebugModel, ExpressionContainer, MemoryRegion, Thread } from 'vs/workbench/contrib/debug/common/debugModel';
 import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
@@ -92,6 +95,7 @@ export class DebugSession implements IDebugSession {
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@ICustomEndpointTelemetryService private readonly customEndpointTelemetryService: ICustomEndpointTelemetryService,
 		@IWorkbenchEnvironmentService private readonly workbenchEnvironmentService: IWorkbenchEnvironmentService,
+		@ICodeEditorService private readonly codeEditorService?: ICodeEditorService,
 	) {
 		this._options = options || {};
 		this.parentSession = this._options.parentSession;
@@ -1238,10 +1242,34 @@ export class DebugSession implements IDebugSession {
 	}
 
 	private onDidExitAdapter(event?: AdapterEndEvent): void {
-		this.initialized = true;
-		this.model.setBreakpointSessionData(this.getId(), this.capabilities, undefined);
-		this.shutdown();
-		this._onDidEndAdapter.fire(event);
+		// TODO: Remove codeEditor and just do it through the handlewdiget class
+		if (this.debugService.candidateExist) {
+			const codeEditor = this.codeEditorService?.getActiveCodeEditor()!;
+			const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
+			const line = codeEditor?.getModel()?.getLinesContent().findIndex(s => s.includes('??'))!;
+			const handleSolutionWidget = this.instantiationService.createInstance(HandleSolutionWidget, codeEditor);
+			handleSolutionWidget.show({ lineNumber: line + 1, column: 10 }, 0);
+			handleSolutionWidget.focus();
+			codeEditor.revealRangeInCenter({
+				startLineNumber: line + 1,
+				startColumn: 10,
+				endLineNumber: line + 1,
+				endColumn: 10,
+			});
+			this.rawListeners.push(handleSolutionWidget.onDidClose(async _ => {
+				codeEditorContribution.removeInlineValuesScheduler.schedule();
+				this.initialized = true;
+				this.model.setBreakpointSessionData(this.getId(), this.capabilities, undefined);
+				this.shutdown();
+				this._onDidEndAdapter.fire(event);
+			}));
+
+		} else {
+			this.initialized = true;
+			this.model.setBreakpointSessionData(this.getId(), this.capabilities, undefined);
+			this.shutdown();
+			this._onDidEndAdapter.fire(event);
+		}
 	}
 
 	// Disconnects and clears state. Session can be initialized again for a new connection.

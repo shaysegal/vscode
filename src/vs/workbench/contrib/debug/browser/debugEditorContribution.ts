@@ -47,6 +47,7 @@ import { sketchValueInline, suggestedValueAsComment } from 'vs/workbench/contrib
 import { DebugHoverWidget } from 'vs/workbench/contrib/debug/browser/debugHover';
 import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
+import { HandleSolutionWidget } from 'vs/workbench/contrib/debug/browser/handleSolutionWidget';
 import { TriggerlessWidget } from 'vs/workbench/contrib/debug/browser/triggerlessWidget';
 import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
@@ -322,6 +323,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 
 	public exceptionWidget: ExceptionWidget | undefined;
 	public triggerlessWidget: TriggerlessWidget | undefined;
+	public handleSolutionWidget: HandleSolutionWidget | undefined;
 	private configurationWidget: FloatingClickWidget | undefined;
 	private altListener: IDisposable | undefined;
 	private altPressed = false;
@@ -642,7 +644,6 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		}
 	}
 
-
 	public showTriggerlessWidget(lineNumber: number, column: number): void {
 		if (this.triggerlessWidget) {
 			this.triggerlessWidget.dispose();
@@ -664,6 +665,33 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			const shouldFocusEditor = this.triggerlessWidget.hasFocus();
 			this.triggerlessWidget.dispose();
 			this.triggerlessWidget = undefined;
+			if (shouldFocusEditor) {
+				this.editor.focus();
+			}
+		}
+	}
+
+	public showHandleSolutionWidget(lineNumber: number, column: number): void {
+		if (this.handleSolutionWidget) {
+			this.handleSolutionWidget.dispose();
+		}
+
+		this.handleSolutionWidget = this.instantiationService.createInstance(HandleSolutionWidget, this.editor);
+		this.handleSolutionWidget.show({ lineNumber, column }, 0);
+		this.handleSolutionWidget.focus();
+		this.editor.revealRangeInCenter({
+			startLineNumber: lineNumber,
+			startColumn: column,
+			endLineNumber: lineNumber,
+			endColumn: column,
+		});
+	}
+
+	public closeHandleSolutionWidget(): void {
+		if (this.handleSolutionWidget) {
+			const shouldFocusEditor = this.handleSolutionWidget.hasFocus();
+			this.handleSolutionWidget.dispose();
+			this.handleSolutionWidget = undefined;
 			if (shouldFocusEditor) {
 				this.editor.focus();
 			}
@@ -736,7 +764,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 	// Inline Decorations
 
 	@memoize
-	private get removeInlineValuesScheduler(): RunOnceScheduler {
+	public get removeInlineValuesScheduler(): RunOnceScheduler {
 		return new RunOnceScheduler(
 			() => {
 				this.oldDecorations.clear();
@@ -763,7 +791,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		const inlineValuesSetting = this.configurationService.getValue<IDebugConfiguration>('debug').inlineValues;
 		const inlineValuesTurnedOn = inlineValuesSetting === true || inlineValuesSetting === 'on' || (inlineValuesSetting === 'auto' && model && this.languageFeaturesService.inlineValuesProvider.has(model));
 		if (!inlineValuesTurnedOn || !model || !stackFrame || model.uri.toString() !== stackFrame.source.uri.toString()) {
-			if (!this.removeInlineValuesScheduler.isScheduled()) {
+			if (!this.removeInlineValuesScheduler.isScheduled() && !this.debugService.candidateExist) {
 				this.removeInlineValuesScheduler.schedule();
 			}
 			return;

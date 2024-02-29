@@ -18,7 +18,7 @@ import * as editorCommon from 'vs/editor/common/editorCommon';
 import { ITextModel as EditorIModel } from 'vs/editor/common/model';
 import * as nls from 'vs/nls';
 import { ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
-import { RawContextKey } from 'vs/platform/contextkey/common/contextkey';
+import { IContextKey, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { ITelemetryEndpoint } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
@@ -973,6 +973,7 @@ export interface IDebugService {
 	readonly initializingOptions?: IDebugSessionOptions | undefined;
 
 	validDesynt: boolean;
+	candidateExist: IContextKey<boolean>;
 
 	/**
 	 * Allows to register on debug state changes.
