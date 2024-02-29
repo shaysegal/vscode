@@ -442,7 +442,7 @@ export class DesyntHistoryView extends ViewPane {
 	private changeScheduler!: RunOnceScheduler;
 	private treeNeedsRefreshOnVisible = true;
 	private filter!: DesyntHistoryFilter;
-	private keyRunningNumber: number = 0;
+	// private keyRunningNumber: number = 0;
 	private keyIteration: number = 1;
 	constructor(
 		options: IViewletViewOptions,
@@ -563,13 +563,13 @@ export class DesyntHistoryView extends ViewPane {
 		const registerSessionListeners = (session: IDebugSession) => {
 			this._register(this.debugService.onDidChangeState((e) => {
 				if (e === State.Stopped) {
-					this.keyRunningNumber = 0;
+					// this.keyRunningNumber = 0;
 					if (root.getChild(this.keyIteration.toString())) {
 						this.keyIteration += 1;
 					}
 				}
 				if (e === State.Inactive || e === State.Initializing) {
-					this.keyRunningNumber = 0;
+					// this.keyRunningNumber = 0;
 					this.keyIteration = 1;
 					root.removeAll();
 					scheduleRefreshOnVisible();
@@ -674,34 +674,47 @@ export class DesyntHistoryView extends ViewPane {
 		this.debugService.getModel().getSessions().forEach(session => addSourcePathsToSession(session));
 	}
 	async addChangeToDesyntView(root: RootTreeItem, value: string) {
-		const key = this.keyIteration.toString() + ',' + this.keyRunningNumber.toString();
-		let currentParentItem: DesyntHistoryTreeItem;
+		const key = this.keyIteration.toString() + ',' + '0';
+		// let currentParentItem: DesyntHistoryTreeItem;
 		const parentKey = this.keyIteration.toString();
-		if (this.keyRunningNumber === 0) {//new row
-			const parentItem = new DesyntHistoryTreeItem(root, 'iteration ' + this.keyIteration.toString());
-			root.create(parentKey, parentItem);
-			currentParentItem = parentItem;
-			//add input items:
-			const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
-			if (scopes) {
-				const locals = await scopes[0].getChildren();
-				if (locals) {
-					const inputKey = this.keyIteration.toString() + ',-1';
-					const inputItem = new DesyntHistoryTreeItem(parentItem, 'input variables');
-					parentItem.create(inputKey, inputItem);
-					let index = 0;
-					for (const variable of locals) {
-						const variableItem = new DesyntHistoryTreeItem(inputItem, variable.toString());
-						inputItem.create(index.toString(), variableItem);
-						index += 1;
-					}
+		const parentItem = new DesyntHistoryTreeItem(root, 'iteration ' + this.keyIteration.toString());
+		root.create(parentKey, parentItem);
+		const currentParentItem = parentItem;
+		//add input items:
+		// TODO: must fix
+		const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
+		if (scopes) {
+			const localscope = await scopes[0].getChildren();
+			if (localscope) {
+				const inputKey = this.keyIteration.toString() + ',-1';
+				const inputItem = new DesyntHistoryTreeItem(parentItem, 'input variables');
+				parentItem.create(inputKey, inputItem);
+				let index = 0;
+				for (const variable of localscope) {
+					const variableItem = new DesyntHistoryTreeItem(inputItem, variable.toString());
+					inputItem.create(index.toString(), variableItem);
+					index += 1;
+				}
 
+				const session = this.debugService.getViewModel().focusedSession;
+				const thread = this.debugService.getViewModel().focusedThread;
+				const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
+				const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
+
+				const localScope = await scopes!.find(s => s.name === 'Locals')?.getChildren()!;
+				const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
+				const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
+
+				if (session && focusedStackFrame && wrapperFrame) {
+					const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
+					await session.evaluate(updateEvaluation, wrapperFrame.frameId);
 				}
 			}
 		}
-		else {
-			currentParentItem = root.getChild(parentKey) as DesyntHistoryTreeItem;
-		}
+		// }
+		// else {
+		// 	currentParentItem = root.getChild(parentKey) as DesyntHistoryTreeItem;
+		// }
 
 		currentParentItem.createIfNeeded(key, () => new DesyntHistoryTreeItem(currentParentItem, 'set sketch value to: ' + value));
 		// this.keyRunningNumber += 1; // Commented to to have new sketch values replace previous ones instead of accumulating sketches

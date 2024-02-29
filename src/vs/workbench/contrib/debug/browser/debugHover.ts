@@ -573,29 +573,12 @@ export class HoverVariablesRenderer extends VariablesRenderer {
 			const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
 
 			// This is nice but slows the update of the views down a bit
-			if (success && (variable.value !== value || (variable.inDesynt && value === 'None')) && focusedStackFrame) {
+			if (success && focusedStackFrame) {
 				variable.setVariable(value, focusedStackFrame)
 					.then(async () => {
 						updateForgetScopes(false);
 						if (!variable.errorMessage) {
 							this.storageService.store((this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString(), value, StorageScope.PROFILE, StorageTarget.MACHINE);
-							// Update synt_dict every time the user inputs a new sketch value to allow user to synthesis with current sketch included
-							// Mad ugly, but works
-							const session = this.debugService.getViewModel().focusedSession;
-							const thread = this.debugService.getViewModel().focusedThread;
-							const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
-
-							const scopes = await focusedStackFrame?.getScopes();
-							const localScope = await scopes!.
-								find(s => s.name === 'Locals')?.
-								getChildren()!;
-							const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
-							const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
-
-							if (session && focusedStackFrame && wrapperFrame) {
-								const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
-								await session.evaluate(updateEvaluation, wrapperFrame.frameId);
-							}
 							this.debugService.validDesynt = true;
 						} else {
 							this.debugService.validDesynt = false;

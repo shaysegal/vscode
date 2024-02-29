@@ -1243,7 +1243,7 @@ export class DebugSession implements IDebugSession {
 
 	private onDidExitAdapter(event?: AdapterEndEvent): void {
 		// TODO: Remove codeEditor and just do it through the handlewdiget class
-		if (this.debugService.candidateExist) {
+		if (this.debugService.candidateExist.get()) {
 			const codeEditor = this.codeEditorService?.getActiveCodeEditor()!;
 			const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 			const line = codeEditor?.getModel()?.getLinesContent().findIndex(s => s.includes('??'))!;
