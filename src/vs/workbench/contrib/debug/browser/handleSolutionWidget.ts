@@ -17,6 +17,7 @@ import { EditorOption } from 'vs/editor/common/config/editorOptions';
 import { ZoneWidget } from 'vs/editor/contrib/zoneWidget/browser/zoneWidget';
 import * as nls from 'vs/nls';
 import { createActionViewItem } from 'vs/platform/actions/browser/menuEntryActionViewItem';
+import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { IColorTheme, IThemeService } from 'vs/platform/theme/common/themeService';
@@ -38,7 +39,8 @@ export class HandleSolutionWidget extends ZoneWidget {
 	constructor(
 		editor: ICodeEditor,
 		@IThemeService themeService: IThemeService,
-		@IInstantiationService protected readonly instantiationService: IInstantiationService
+		@IInstantiationService protected readonly instantiationService: IInstantiationService,
+		@ICommandService protected readonly commandService: ICommandService
 	) {
 		super(editor, { showFrame: true, showArrow: true, isAccessible: true, frameWidth: 1, className: 'handleSolution-widget-container' });
 
@@ -98,7 +100,7 @@ export class HandleSolutionWidget extends ZoneWidget {
 		}), { label: false, icon: true });
 		this._actionbarWidget.push(new Action('handleSolution.accept', nls.localize('label.accept', "Accept"), ThemeIcon.asClassName(Codicon.check), true, () => {
 			//TODO: Run ACCEPT_DESYNT action from here
-			this.dispose();
+			this.commandService.executeCommand('workbench.action.debug.DesyntAccept');
 			return Promise.resolve();
 		}), { label: false, icon: true });
 	}

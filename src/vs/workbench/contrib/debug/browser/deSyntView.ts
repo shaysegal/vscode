@@ -37,7 +37,7 @@ import { SynthesisTimeoutInMiliSeconds, SynthesizerPort, SynthesizerUrl, Sythesi
 import { watchExpressionsAdd, watchExpressionsRemoveAll } from 'vs/workbench/contrib/debug/browser/debugIcons';
 import { LinkDetector } from 'vs/workbench/contrib/debug/browser/linkDetector';
 import { VariablesRenderer, updateForgetScopes, } from 'vs/workbench/contrib/debug/browser/variablesView';
-import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_CANDIDATE_EXIST, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugEditorContribution, IDebugService, IDebugSession, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
+import { CONTEXT_CAN_VIEW_MEMORY, CONTEXT_DESYNT_EXIST, CONTEXT_DESYNT_FOCUSED, CONTEXT_IN_DEBUG_MODE, CONTEXT_VARIABLE_IS_READONLY, CONTEXT_WATCH_ITEM_TYPE, DESYNT_VIEW_ID, IDebugEditorContribution, IDebugService, IDebugSession, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
 import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugModel';
 // import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
@@ -95,7 +95,8 @@ export class DeSyntView extends ViewPane {
 
 		// this.editorService = editorService;
 		this.watchExpressionsExist = CONTEXT_DESYNT_EXIST.bindTo(contextKeyService);
-		this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
+		// this.candidateExist = CONTEXT_DESYNT_CANDIDATE_EXIST.bindTo(contextKeyService);
+		this.candidateExist = debugService.candidateExist;
 		this.variableReadonly = CONTEXT_VARIABLE_IS_READONLY.bindTo(contextKeyService);
 		this.watchExpressionsExist.set(this.debugService.getModel().getWatchExpressions(true).length > 0);
 		this.watchItemType = CONTEXT_WATCH_ITEM_TYPE.bindTo(contextKeyService);
@@ -123,7 +124,7 @@ export class DeSyntView extends ViewPane {
 		try {
 			await session.evaluate(updateEvaluation, stackFrame.frameId);
 		} catch (ex) {
-			console.log("got exception on 'remove_sol_if_override', might cause a problem", ex)
+			console.log('got exception on \'remove_sol_if_override\', might cause a problem', ex);
 		}
 		await this.sendToSynthesizer(SyntDictJson, controller, codeEditorContribution);
 		return;
@@ -417,8 +418,8 @@ export class DeSyntView extends ViewPane {
 		}
 	}
 	private async updateDebugger(line: number, program: string) {
-		const session = await this.debugService.getViewModel().focusedSession;
-		const stackFrame = await this.debugService.getViewModel().focusedStackFrame;
+		const session = this.debugService.getViewModel().focusedSession;
+		const stackFrame = this.debugService.getViewModel().focusedStackFrame;
 		if (session && stackFrame) {
 			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}','overrideValue': None})`;
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
