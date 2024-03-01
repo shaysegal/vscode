@@ -564,6 +564,9 @@ export class DesyntHistoryView extends ViewPane {
 			this._register(this.debugService.onDidChangeState((e) => {
 				if (e === State.Stopped) {
 					// this.keyRunningNumber = 0;
+					// Remove stored values after restart
+					const desired_key = (this.debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + this.storageService.desyntIteration.toString();
+					this.storageService.remove(desired_key, StorageScope.APPLICATION);
 					if (root.getChild(this.keyIteration.toString())) {
 						this.keyIteration += 1;
 					}
@@ -576,6 +579,7 @@ export class DesyntHistoryView extends ViewPane {
 				}
 			}
 			));
+
 			this._register(this.storageService.onDidChangeValue(async e => {
 				// Wasn't won't work between iterations with the same value
 				// Done by changing the storagaeService to also hold to keyiteration so it can be accessed from the hover widget
