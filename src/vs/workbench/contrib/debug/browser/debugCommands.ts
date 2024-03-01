@@ -41,6 +41,7 @@ import { openBreakpointSource } from 'vs/workbench/contrib/debug/browser/breakpo
 import { doesTrigger, minimumUniqueExamples4Triggerless, triggerlessExtraBreakpoint } from 'vs/workbench/contrib/debug/browser/deSyntConstants';
 import { DeSyntView } from 'vs/workbench/contrib/debug/browser/deSyntView';
 import { DebugEditorContribution } from 'vs/workbench/contrib/debug/browser/debugEditorContribution';
+import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { showDebugSessionMenu } from 'vs/workbench/contrib/debug/browser/debugSessionPicker';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
 import { CONTEXT_BREAKPOINTS_FOCUSED, CONTEXT_BREAKPOINT_INPUT_FOCUSED, CONTEXT_DEBUGGERS_AVAILABLE, CONTEXT_DEBUG_STATE, CONTEXT_DISASSEMBLY_VIEW_FOCUS, CONTEXT_EXPRESSION_SELECTED, CONTEXT_FOCUSED_SESSION_IS_ATTACH, CONTEXT_IN_DEBUG_MODE, CONTEXT_IN_DEBUG_REPL, CONTEXT_JUMP_TO_CURSOR_SUPPORTED, CONTEXT_STEP_INTO_TARGETS_SUPPORTED, CONTEXT_VARIABLES_FOCUSED, CONTEXT_WATCH_EXPRESSIONS_FOCUSED, DESYNT_VIEW_ID, EDITOR_CONTRIBUTION_ID, IConfig, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IEnablement, IExceptionInfo, IStackFrame, IThread, REPL_VIEW_ID, State, VIEWLET_ID, getStateLabel } from 'vs/workbench/contrib/debug/common/debug';
@@ -596,15 +597,25 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const stackFrame = debugService.getViewModel().focusedStackFrame;
 		const pattern = '??';
 		const session = debugService.getViewModel().focusedSession;
-		if (stackFrame && codeEditor) {
+		let doStopSession = true;
+		if (codeEditor) {
 			const codeEditorModel = codeEditor.getModel();
-			const scopes = await stackFrame.getMostSpecificScopes(stackFrame.range);
 			// Get all top level variables in the scope chain
-			if (codeEditorModel && scopes && session) {
+			if (codeEditorModel && session) {
 				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
-				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
-				if (SyntDict) {
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+				let SyntDictJson = undefined
+				if (stackFrame) {
+					const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+					if (SyntDict)
+						SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+				} else {
+					SyntDictJson = (debugService as DebugService).LastDesyntProg;
+					doStopSession = false;
+					//init LastDesyntProg for next session
+					(debugService as DebugService).LastDesyntProg = undefined
+
+				}
+				if (SyntDictJson) {
 					const sketchLineNumbers = Object.keys(SyntDictJson);
 					const lines = codeEditorModel.getLinesContent();
 					for (const sketchLine of sketchLineNumbers) {
@@ -633,7 +644,10 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			}
 
 		}
-		await debugService.stopSession(session, false, false);
+		if (doStopSession) {
+			//only needed when called from the button
+			await debugService.stopSession(session, false, false);
+		}
 	}
 });
 

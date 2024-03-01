@@ -10,6 +10,7 @@ import Severity from 'vs/base/common/severity';
 import { URI as uri } from 'vs/base/common/uri';
 import { IPosition, Position } from 'vs/editor/common/core/position';
 import { ITextModel } from 'vs/editor/common/model';
+import { IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { AbstractDebugAdapter } from 'vs/workbench/contrib/debug/common/abstractDebugAdapter';
 import { AdapterEndEvent, IAdapterManager, IBreakpoint, IBreakpointData, IBreakpointUpdateData, IConfig, IConfigurationManager, IDataBreakpoint, IDebugger, IDebugModel, IDebugService, IDebugSession, IDebugSessionOptions, IEvaluate, IExceptionBreakpoint, IExceptionInfo, IExpression, IFunctionBreakpoint, IInstructionBreakpoint, ILaunch, IMemoryRegion, IRawModelUpdate, IRawStoppedDetails, IReplElement, IReplElementSource, IStackFrame, IThread, IViewModel, LoadedSourceEvent, State } from 'vs/workbench/contrib/debug/common/debug';
@@ -19,6 +20,7 @@ import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
 import { DebugStorage } from 'vs/workbench/contrib/debug/common/debugStorage';
 
 export class MockDebugService implements IDebugService {
+	candidateExist!: IContextKey<boolean>;
 	validDesynt: boolean = false;
 	initializingOptions?: IDebugSessionOptions | undefined;
 	addDesyntWatchExpression(name?: string | undefined): void {

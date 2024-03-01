@@ -80,13 +80,15 @@ export class HandleSolutionWidget extends ZoneWidget {
 	protected _fillContainer(container: HTMLElement): void {
 		this.setCssClass('handleSolution-widget');
 		this._headElement = dom.$<HTMLDivElement>('.body');
+		this._headElement.style.display = "flex";
+		this._headElement.style.marginLeft = "10pt";
 		this._fillHead();
 		container.appendChild(this._headElement);
 	}
 
 	// TODO: make the actionbar and headElement on same line
 	protected _fillHead(): void {
-		this._headElement!.innerText = 'Solution to handle...';
+		this._headElement!.innerText = 'Accept suggestion be closing?';
 		const actionsContainer = dom.$('.handleSolution-actions');
 		dom.append(this._headElement!, actionsContainer);
 
@@ -101,6 +103,7 @@ export class HandleSolutionWidget extends ZoneWidget {
 		this._actionbarWidget.push(new Action('handleSolution.accept', nls.localize('label.accept', "Accept"), ThemeIcon.asClassName(Codicon.check), true, () => {
 			//TODO: Run ACCEPT_DESYNT action from here
 			this.commandService.executeCommand('workbench.action.debug.DesyntAccept');
+			this.dispose();
 			return Promise.resolve();
 		}), { label: false, icon: true });
 	}

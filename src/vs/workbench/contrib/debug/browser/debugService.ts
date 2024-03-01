@@ -89,7 +89,7 @@ export class DebugService implements IDebugService {
 	private haveDoneLazySetup = false;
 	public candidateExist!: IContextKey<boolean>;
 	public validDesynt: boolean = false;
-
+	private desyntLastProgram: string | undefined = undefined;
 	constructor(
 		@IEditorService private readonly editorService: IEditorService,
 		@IPaneCompositePartService private readonly paneCompositeService: IPaneCompositePartService,
@@ -203,6 +203,8 @@ export class DebugService implements IDebugService {
 
 		this.initContextKeys(contextKeyService);
 	}
+	get LastDesyntProg(){return this.desyntLastProgram;}
+	set LastDesyntProg(value){this.desyntLastProgram = value}
 	addDesyntWatchExpression(name?: string | undefined): void {
 		const we = this.model.addDesyntWatchExpression(name);
 		if (!name) {

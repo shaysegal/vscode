@@ -1257,6 +1257,8 @@ export class DebugSession implements IDebugSession {
 				endColumn: 10,
 			});
 			this.rawListeners.push(handleSolutionWidget.onDidClose(async _ => {
+				//verify synthesizer is restarted
+				await this.debugService.stopSession(undefined, false, false);
 				codeEditorContribution.removeInlineValuesScheduler.schedule();
 				this.initialized = true;
 				this.model.setBreakpointSessionData(this.getId(), this.capabilities, undefined);

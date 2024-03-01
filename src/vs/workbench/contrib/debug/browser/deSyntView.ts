@@ -44,6 +44,7 @@ import { Expression, Variable } from 'vs/workbench/contrib/debug/common/debugMod
 import { KeyChord, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { KeybindingWeight, KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { IProgressService } from 'vs/platform/progress/common/progress';
+import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 
 
 
@@ -421,9 +422,13 @@ export class DeSyntView extends ViewPane {
 		const session = this.debugService.getViewModel().focusedSession;
 		const stackFrame = this.debugService.getViewModel().focusedStackFrame;
 		if (session && stackFrame) {
-			const syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}','overrideValue': None})`;
+			let syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}','overrideValue': None})`;
+			await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+			syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
-			console.log(SyntDict);
+			if (SyntDict)
+				(this.debugService as DebugService).LastDesyntProg = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+
 			this.notificationSer.info(`Successully synthesized program for line: ${line}`);
 		}
 	}
