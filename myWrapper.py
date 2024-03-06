@@ -65,19 +65,20 @@ def ad_hoc_eval_solution(line_number, localState):
 
 
 # What does this do?
-def ad_hoc_alter__a__(func_name):
-    stackframe = list(
-        filter(lambda frame: frame.function == func_name, inspect.stack())
-    )
-    if len(stackframe) == 1:
-        current_frame = stackframe[0]
-        return alter__a__(
-            current_frame.lineno,
-            current_frame.frame.f_locals,
-            current_frame.frame.f_globals,
-        )
+# def ad_hoc_alter__a__(, globals):
+#     # stackframe = list(
+#     #     filter(lambda frame: frame.function == func_name, inspect.stack())
+#     # )
+#     # if len(stackframe) == 1:
+#     #     current_frame = stackframe[0]
+#     #     return alter__a__(
+#     #         current_frame.lineno,
+#     #         current_frame.frame.f_locals,
+#     #         current_frame.frame.f_globals,
+#     #     )
 
-    return None
+#     # return None
+
 
 
 """ TODO: do this in one part
@@ -127,7 +128,7 @@ def update_synt_dict(locals_state_json, value, current_line):
         # Grim but works
         
         tmp_locals = {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in locals_state.items()}
-        tmp_input = [{k: v.tolist() if isinstance(v, np.ndarray) else v} for d in synt_dict[current_line]["input"] for k, v in d.items()]
+        tmp_input = [{k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in d.items()} for d in synt_dict[current_line]["input"]]
         # I hate this
 
         if tmp_locals in tmp_input:
@@ -143,7 +144,6 @@ def update_synt_dict(locals_state_json, value, current_line):
 
         synt_dict[current_line]["input"].append(locals_state)
         synt_dict[current_line]["output"].append(value)
-        print(synt_dict)
 
     else:
         synt_dict[current_line] = {
