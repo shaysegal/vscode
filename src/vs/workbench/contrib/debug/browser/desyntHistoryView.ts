@@ -709,8 +709,12 @@ export class DesyntHistoryView extends ViewPane {
 				const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
 				const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
 
+				const globalScope = await scopes!.find(s => s.name === 'Globals')?.getChildren()!;
+				const safeGlobalScope = globalScope.filter(s => ['int', 'str'].includes(s.type!));
+				const globals = JSON.stringify(safeGlobalScope.map(l => l.toString()));
+
 				if (session && focusedStackFrame && wrapperFrame) {
-					const updateEvaluation = `update_synt_dict(${locals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
+					const updateEvaluation = `update_synt_dict(${locals}, ${globals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
 					await session.evaluate(updateEvaluation, wrapperFrame.frameId);
 				}
 			}
