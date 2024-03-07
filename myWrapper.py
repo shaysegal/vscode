@@ -116,13 +116,19 @@ def remove_sol_if_override(current_line):
         synt_dict[current_line]["overrideValue"] = None
 
 
-def update_synt_dict(locals_state_json, value, current_line):
+def update_synt_dict(locals_state_json, global_state_json, value, current_line):
     if value is None:
         raise RuntimeError("Cannot set sketchValue to None")
 
     locals_state = convert_json_localstate(
         locals_state_json
     )  # don't need preserved as we are already given only the preserved local state
+
+    globals_state = convert_json_localstate(
+        global_state_json
+    )  # don't need preserved as we are already given only the preserved local state
+
+    locals_state = dict(globals_state, **locals_state) # this ordering for update so the local state takes precedence
 
     if current_line in synt_dict:
         # Grim but works
@@ -142,7 +148,7 @@ def update_synt_dict(locals_state_json, value, current_line):
             synt_dict[current_line]["overrideValue"] = value
             sketchValueContainer.sketchValue = value
 
-        synt_dict[current_line]["input"].append(locals_state)
+        synt_dict[current_line]["input"].append(locals_state) 
         synt_dict[current_line]["output"].append(value)
 
     else:
@@ -198,6 +204,7 @@ def validated_codefile(code_file_path):
         textfile = f.read().decode("utf-8")
         start = 0
         count = 0
+
         pattern_index = textfile.find("??", start)
         while pattern_index != -1:
             old_pattern_index = pattern_index
