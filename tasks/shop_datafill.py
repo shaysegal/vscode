@@ -3,12 +3,6 @@ New shop owner, have 5? examples of how old owner prices apples based on quality
 
 Given the following examples, recreated the function that produces the correct price for an apple:
 
-            |  Quality  |
-Apple 1 ->        3
-Apple 2 ->        2
-Apple 3 ->        2
-Apple 4 ->       -2
-Apple 5 ->        0
 
 """
 
@@ -18,7 +12,27 @@ Apple 5 ->        0
 class Shop:
     def __init__(self, apples_file: str) -> None:
         self.apples_file = apples_file
-        
+        self.references = []
+    
+    def load_reference(self):
+        ref_path = self.apples_file.split(".")
+        ref_path.insert(-1,"ref")
+        ref_path=".".join(ref_path)
+        with open(ref_path, 'rb') as of:
+            for byte_array in of.readlines():
+                # Extract bytes representing string and integer
+                string_length = byte_array[0]  # Assuming the first byte represents the length of the string
+                string_bytes = byte_array[1:string_length+1]
+                integer_bytes = byte_array[string_length+1:-1]
+
+                # Decode bytes back to string
+                csv_string = string_bytes.decode('utf-8')
+
+                # Decode bytes back to integer
+                csv_integer = int.from_bytes(integer_bytes, byteorder='big',signed=True)
+
+                self.references.append([csv_string, str(csv_integer)])
+
     @staticmethod
     def get_quality(weight: int, sweetness: int, crunchiness: int, juiciness: int, acidity: int) -> int:
         ...
@@ -48,4 +62,5 @@ class Shop:
         return prices
 
 s = Shop('data/apples.bin')
+s.load_reference()
 print('\n'.join(p for p in s.pricing()))
