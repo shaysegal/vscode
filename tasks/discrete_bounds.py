@@ -3,7 +3,6 @@ from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
 
 np.random.seed(4)
@@ -12,9 +11,9 @@ np.random.seed(4)
 
 def ensure_inbounds(positions: npt.NDArray, diameter: int, bounds: list[int]):
     inbound_positions = ??
+    # inbound_positions = positions
     return inbound_positions
 # Possible Solution
-# inbound_positions = np.clip(positions, 1, np.subtract(bounds, 1)[1]).tolist()
 
 
 class Model:
