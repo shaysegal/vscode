@@ -720,12 +720,18 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 					const debugSession = debugService.getViewModel().focusedSession!;
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 
-					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
-					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
-					// TOODO: Leads to error for desynt synthesis
+					try {
+						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
+						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+						// TOODO: Leads to error for desynt synthesis
+					} catch (e) {
+						console.log("probably timed out")
+						console.log(e)
+					}
 					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
 						await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
 					}
+
 				}
 			}
 
@@ -821,13 +827,18 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 
 					const debugSession = debugService.getViewModel().focusedSession!;
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
-
-					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
-					// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
-					// TOODO: Leads to error for desynt synthesis
+					try {
+						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
+						// Potential solution to the continue problem (and also presents the user with the output of the generated code on the input)
+						// TOODO: Leads to error for desynt synthesis
+					} catch (e) {
+						console.log("probably timed out")
+						console.log(e)
+					}
 					if (localDesyntView.solution && triggerlessExtraBreakpoint) {
 						await debugService.addBreakpoints(codeEditor!.getModel()!.uri, [{ lineNumber: currentLine + 1, column: 0 }]);
 					}
+
 				}
 			}
 
@@ -1100,8 +1111,13 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 					// If user does not change value then need to do something
 					const debugSession = debugService.getViewModel().focusedSession!;
 					const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
+					try {
+						await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
 
-					await triggerlessSynthesize(session!, sf, localDesyntView, currentLine, codeEditorContribution, debugSession, currentLine, currentCodeLine);
+					} catch (e) {
+						console.log("probably timed out")
+						console.log(e)
+					}
 					await new Promise(resolve => {
 						setTimeout(resolve, 500);
 					});
