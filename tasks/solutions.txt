@@ -1,0 +1,11 @@
+Discrete bounds:
+	- inbound_positions = np.clip(positions, 1, np.subtract(bounds, 1)[1]).tolist()
+
+Scheduler:
+	- urgency =len + imp - (total_resources // res)
+
+VIN:
+	- 
+
+Shop (apples)
+	-

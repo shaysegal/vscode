@@ -59,5 +59,6 @@ class Model:
             self.draw()
 
 
-model = Model(3, 2, [0, 10])
-model.run()
+if __name__ == "__main__":
+    model = Model(3, 2, [0, 10])
+    model.run()

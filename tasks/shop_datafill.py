@@ -6,14 +6,18 @@ Given the following examples, recreated the function that produces the correct p
 
 """
 
-# TODO: Put quality values into a file, read it at the same time as 'get_apples', then user will need to go back in stack to get these values. Only ahve 
-# n with an actual value
+from collections import deque
+import statistics
+
+quality_last_10 = deque(maxlen=10)
+avg_quality = 0
+
 
 class Shop:
     def __init__(self, apples_file: str) -> None:
         self.apples_file = apples_file
         self.references = []
-    
+
     def load_reference(self):
         ref_path = self.apples_file.split(".")
         ref_path.insert(-1,"ref")
@@ -34,13 +38,20 @@ class Shop:
                 self.references.append([csv_string, str(csv_integer)])
 
     @staticmethod
-    def get_quality(weight: int, sweetness: int, crunchiness: int, juiciness: int, acidity: int) -> int:
-        ...
+    def get_quality(
+        weight: int, sweetness: int, crunchiness: int, juiciness: int, acidity: int
+    ) -> int:
+        quality = ??  # Interdependency here
+        r_quality = quality + 0.1 * (avg_quality - quality)
+        return r_quality
 
     def price(self, apple: list[int]) -> float:
+        global avg_quality
         quality = self.get_quality(*apple)
+        quality_last_10.append(quality)
+        avg_quality = round(statistics.mean(quality_last_10))
         return quality * 3.14
-    
+
     def total_price(self, apple: list[int]) -> float:
         base_price = self.price(apple)
         return base_price * 1.17

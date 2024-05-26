@@ -42,7 +42,7 @@ class Job:
 class Scheduler:
     def __init__(self, jobs: dict) -> None:
         self.jobs = self.extract_jobs(jobs)
-        self.evaluator = Evaluator()
+        # self.evaluator = Evaluator()
 
     def extract_jobs(self, jobs: dict) -> List[Job]:
         return [Job(**j) for j in jobs.values()]
@@ -66,7 +66,7 @@ class Scheduler:
 
     def fetch_next_job(self) -> Generator[Job, None, None]:
         global total_resources
-        current_evaluations = self.evaluator.eval_jobs(self.jobs)
+        # current_evaluations = self.evaluator.eval_jobs(self.jobs)
         new_job = self.next_job(self.jobs)
         total_resources -= new_job.resource_requirement
         self.jobs.remove(new_job)
@@ -77,9 +77,10 @@ class Scheduler:
             yield from self.fetch_next_job()
 
 
-with open('data/jobs.json', 'r') as f:
-    js = json.load(f)
-    s = Scheduler(js)
+if __name__ == "__main__":
+	with open('data/jobs.json', 'r') as f:
+		js = json.load(f)
+		s = Scheduler(js)
 
-for j in s.schedule():
-    print(f"The next job is: {j.name:<25} {'lasting:':>10} {j.length} time")
+	for j in s.schedule():
+		print(f"The next job is: {j.name:<25} {'lasting:':>10} {j.length} time")
