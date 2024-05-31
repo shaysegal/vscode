@@ -1,6 +1,6 @@
 from typing import Optional, Type
 
-from common import Annotatable
+from test_vininfo.common import Annotatable
 
 if False:  # pragma: nocover
     from ..toolbox import Vin  # noqa

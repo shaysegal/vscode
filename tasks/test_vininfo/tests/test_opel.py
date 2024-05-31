@@ -1,4 +1,4 @@
-from toolbox import Vin
+from test_vininfo.toolbox import Vin
 
 
 def test_opel():

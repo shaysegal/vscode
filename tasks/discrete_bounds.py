@@ -9,11 +9,10 @@ np.random.seed(4)
 
 # TODO: Requires numpy functions for synthesis
 
-def ensure_inbounds(positions: npt.NDArray, diameter: int, bounds: list[int]):
+
+def ensure_inbounds(positions: npt.NDArray, radius: int, bounds: list[int]):
     inbound_positions = ??
-    # inbound_positions = positions
     return inbound_positions
-# Possible Solution
 
 
 class Model:
@@ -44,7 +43,7 @@ class Model:
     def move(self) -> None:
         steps = np.random.randint(-1, 2, size=(self.num_circles, 2))
         new_agent_positions = self.agents + steps
-        self.agents = ensure_inbounds(new_agent_positions, self.diameter, self.bounds)
+        self.agents = ensure_inbounds(new_agent_positions, self.diameter/2, self.bounds)
 
     def draw(self) -> None:
         for a, c in zip(self.agents, self.circles):
@@ -59,6 +58,6 @@ class Model:
             self.draw()
 
 
-if __name__ == "__main__":
-    model = Model(3, 2, [0, 10])
-    model.run()
+# if __name__ == "__main__":
+model = Model(3, 2, [0, 10])
+model.run()

@@ -2,16 +2,14 @@
 New shop owner, have 5? examples of how old owner prices apples based on quality. Task is to reverse engineer the function that produced the price via writing the get_quality function
 
 Given the following examples, recreated the function that produces the correct price for an apple:
-
-
 """
 
 from collections import deque
 import statistics
 
-quality_last_10 = deque(maxlen=10)
-avg_quality = 0
 
+sweetness_last_10 = deque(maxlen=10)
+avg_sweetness = 0
 
 class Shop:
     def __init__(self, apples_file: str) -> None:
@@ -39,31 +37,33 @@ class Shop:
 
     @staticmethod
     def get_quality(
-        weight: int, sweetness: int, crunchiness: int, juiciness: int, acidity: int
+        weight: int, sweetness: int, juiciness: int, acidity: int
     ) -> int:
-        quality = ??  # Interdependency here
-        r_quality = quality + 0.1 * (avg_quality - quality)
-        return r_quality
+        quality = sweetness + (acidity // weight - avg_sweetness)
+        return quality
 
     def price(self, apple: list[int]) -> float:
-        global avg_quality
         quality = self.get_quality(*apple)
-        quality_last_10.append(quality)
-        avg_quality = round(statistics.mean(quality_last_10))
+        self.update_avg_quality(quality)
         return quality * 3.14
+
+    @staticmethod
+    def update_avg_quality(qual) -> None:
+        global avg_sweetness 
+        sweetness_last_10.append(qual)
+        avg_sweetness = round(statistics.mean(sweetness_last_10))
 
     def total_price(self, apple: list[int]) -> float:
         base_price = self.price(apple)
         return base_price * 1.17
 
     def get_apples(self, apples_file: str) -> list[list[int]]:
-        with open(apples_file, 'rb') as of:
+        with open(apples_file, "rb") as of:
             apples = []
             for l in of.readlines():
                 apple = bytearray(l)[:-1]
                 apples.append(apple)
             return apples
-
 
     def pricing(self) -> list[float]:
         prices = []
@@ -72,6 +72,8 @@ class Shop:
             prices.append(price)
         return prices
 
-s = Shop('data/apples.bin')
+
+# if __name__ == "__main__":
+s = Shop("data/apples.bin")
 s.load_reference()
-print('\n'.join(p for p in s.pricing()))
+print("\n".join(str(p) for p in s.pricing()))

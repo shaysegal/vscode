@@ -1,5 +1,4 @@
-import tests
-from tests import test_checksum
+import test_vininfo.tests as tests
 
 for item in dir(tests):
     test = getattr(tests, item)

@@ -1,7 +1,7 @@
 import pytest
 
-from exceptions import ValidationError
-from toolbox import Vin
+from test_vininfo.exceptions import ValidationError
+from test_vininfo.toolbox import Vin
 
 
 def test_validation():

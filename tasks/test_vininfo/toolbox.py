@@ -3,9 +3,9 @@ from datetime import datetime
 from itertools import cycle
 from typing import List, Optional
 
-from common import Annotatable, Brand, UnsupportedBrand
-from dicts import COUNTRIES, REGIONS, WMI
-from exceptions import ValidationError
+from test_vininfo.common import Annotatable, Brand, UnsupportedBrand
+from test_vininfo.dicts import COUNTRIES, REGIONS, WMI
+from test_vininfo.exceptions import ValidationError
 
 
 class Vin(Annotatable):
@@ -40,6 +40,7 @@ class Vin(Annotatable):
         """
         ...
         # num = num.strip().upper()
+        # num = ??
         return num
 
     def verify_checksum(self, *, check_year: bool = True) -> bool:

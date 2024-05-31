@@ -1,4 +1,4 @@
-from dicts.bodies import *
+from test_vininfo.dicts.bodies import *
 
 from ._base import Detail, VinDetails
 

@@ -1,5 +1,5 @@
-from common import Brand
-from details import avtovaz, nissan, opel, renault
+from test_vininfo.common import Brand
+from test_vininfo.details import avtovaz, nissan, opel, renault
 
 
 class Lada(Brand):
