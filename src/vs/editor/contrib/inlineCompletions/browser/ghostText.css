@@ -48,7 +48,7 @@
 .monaco-editor .desynt-ghost-text-decoration,
 .monaco-editor .desynt-ghost-text-decoration-preview,
 .monaco-editor .desynt-suggest-preview-text .desynt-ghost-text {
-	color: rgba(255, 255, 255, 0.5) !important;
+	color: var(--vscode-editor-inlineValuesForeground) !important;
 	background-color: var(--vscode-editorGhostText-background);
 	border: 1px solid var(--vscode-editorGhostText-border);
 	margin-left: -1.1em;
@@ -56,7 +56,7 @@
 }
 
 .monaco-editor .desynt-ghost-text-decoration-preview-striked {
-	color: rgba(255, 255, 255, 0.5) !important;
+	color: var(--vscode-editor-inlineValuesForeground) !important;
 	background-color: var(--vscode-editorGhostText-background);
 	border: 1px solid var(--vscode-editorGhostText-border);
 	margin-left: -1.1em;
