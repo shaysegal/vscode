@@ -1,4 +1,4 @@
-import test_vininfo.tests as tests
+import tests as tests
 
 for item in dir(tests):
     test = getattr(tests, item)
