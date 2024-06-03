@@ -686,9 +686,10 @@ export class DesyntHistoryView extends ViewPane {
 		const currentParentItem = parentItem;
 		//add input items:
 		// TODO: must fix
-		const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
-		if (scopes) {
-			const localscope = await scopes[0].getChildren();
+		// const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
+		const desyntScope = await this.debugService.getViewModel().focusedThread?.getTopStackFrame()?.getScopes();
+		if (desyntScope) {
+			const localscope = await desyntScope[0].getChildren();
 			if (localscope) {
 				const inputKey = this.keyIteration.toString() + ',-1';
 				const inputItem = new DesyntHistoryTreeItem(parentItem, 'input variables');
@@ -705,15 +706,16 @@ export class DesyntHistoryView extends ViewPane {
 				const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
 				const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
 
-				const localScope = await scopes!.find(s => s.name === 'Locals')?.getChildren()!;
+				const localScope = await desyntScope!.find(s => s.name === 'Locals')?.getChildren()!;
 				const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
 				const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
 
-				const globalScope = await scopes!.find(s => s.name === 'Globals')?.getChildren()!;
+				const globalScope = await desyntScope!.find(s => s.name === 'Globals')?.getChildren()!;
 				const safeGlobalScope = globalScope.filter(s => ['int', 'str'].includes(s.type!));
 				const globals = JSON.stringify(safeGlobalScope.map(l => l.toString()));
 
 				if (session && focusedStackFrame && wrapperFrame) {
+					// This is where the synt_dict is updated with the locals and globals
 					const updateEvaluation = `update_synt_dict(${locals}, ${globals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
 					await session.evaluate(updateEvaluation, wrapperFrame.frameId);
 				}
