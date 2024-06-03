@@ -687,7 +687,8 @@ export class DesyntHistoryView extends ViewPane {
 		//add input items:
 		// TODO: must fix
 		// const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
-		const desyntScope = await this.debugService.getViewModel().focusedThread?.getTopStackFrame()?.getScopes();
+		const desyntFrame = this.debugService.getViewModel().focusedThread?.getTopStackFrame();
+		const desyntScope = await desyntFrame?.getScopes();
 		if (desyntScope) {
 			const localscope = await desyntScope[0].getChildren();
 			if (localscope) {
@@ -716,7 +717,7 @@ export class DesyntHistoryView extends ViewPane {
 
 				if (session && focusedStackFrame && wrapperFrame) {
 					// This is where the synt_dict is updated with the locals and globals
-					const updateEvaluation = `update_synt_dict(${locals}, ${globals}, ${value}, ${focusedStackFrame.range.startLineNumber})`;
+					const updateEvaluation = `update_synt_dict(${locals}, ${globals}, ${value}, ${desyntFrame!.range.startLineNumber})`;
 					await session.evaluate(updateEvaluation, wrapperFrame.frameId);
 				}
 			}
