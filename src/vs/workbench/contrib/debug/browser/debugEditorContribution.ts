@@ -920,8 +920,10 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			allDecorations = distinct(decorationsPerScope.reduce((previous, current) => previous.concat(current), []),
 				// Deduplicate decorations since same variable can appear in multiple scopes, leading to duplicated decorations #129770
 				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
-			if (SyntDict && JSON.stringify(SyntDict) !== '{}' && stackFrame.range.startLineNumber in SyntDict) {
-				await this.addDesyntInsightToDecorations(SyntDict, allDecorations, stackFrame.range as Range);
+
+			const desyntFrame = this.debugService.getViewModel().focusedThread?.getTopStackFrame();
+			if (desyntFrame && SyntDict && JSON.stringify(SyntDict) !== '{}' && desyntFrame.range.startLineNumber in SyntDict) {
+				await this.addDesyntInsightToDecorations(SyntDict, allDecorations, desyntFrame.range as Range);
 			}
 		}
 
