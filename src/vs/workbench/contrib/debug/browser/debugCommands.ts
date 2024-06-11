@@ -607,7 +607,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				if (stackFrame) {
 					const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 					if (SyntDict)
-						SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+						SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 				} else {
 					SyntDictJson = (debugService as DebugService).LastDesyntProg;
 					doStopSession = false;
@@ -1025,7 +1025,7 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 	const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 	const SyntDict = await session!.evaluate(syntDictEvaluation, stackFrame.frameId);
 	if (SyntDict) {
-		const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+		const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 		if (!SyntDictJson[lineNumber]) {
 			return;
 		}

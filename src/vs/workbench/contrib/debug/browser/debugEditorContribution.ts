@@ -922,7 +922,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 				decoration => `${decoration.range.startLineNumber}:${decoration?.options.after?.content}`);
 
 			const desyntFrame = this.debugService.getViewModel().focusedThread?.getTopStackFrame();
-			if (desyntFrame && SyntDict && JSON.stringify(SyntDict) !== '{}' && desyntFrame.range.startLineNumber in SyntDict) {
+			if (desyntFrame && SyntDict && JSON.stringify(SyntDict) !== '{}') {//} && desyntFrame.range.startLineNumber in SyntDict) {
 				await this.addDesyntInsightToDecorations(SyntDict, allDecorations, desyntFrame.range as Range);
 			}
 		}
@@ -968,6 +968,12 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		if (!found) { // show deSynt decoration even if there is no decoraion for it
 			const objSyntDict = SyntDict as any;
 			const sketch_line = current_range.startLineNumber;
+			const model = this.editor.getModel();
+			const lineVal = model!.getLineContent(sketch_line).trimStart();
+
+			if (!lineVal.includes("??")) {
+				return
+			}
 			if (objSyntDict[sketch_line] !== undefined && solutionKey in objSyntDict[sketch_line]) {
 				//TODO: this works well only if there is *ONE* sketch , we need to think about what happens when there are many...
 				const striked = 'overrideValue' in objSyntDict[sketch_line] && objSyntDict[sketch_line]['overrideValue'] !== null;
@@ -1049,7 +1055,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			if (SyntDict) {
 				try {
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 					return SyntDictJson;
 				} catch {
 					console.log('SyntDict isn\'t a valid json');

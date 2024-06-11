@@ -199,7 +199,7 @@ export class DeSyntView extends ViewPane {
 				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 				if (SyntDict) {
 					// const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'', '').replaceAll(/\bNaN\b/g, '"NaN"'));
-					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 					//if (Object.keys(SyntDictJson).length === 0) {//empty object
 					//	await this.ad_hoc_alter_val();
 					//	const newSyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
@@ -427,7 +427,7 @@ export class DeSyntView extends ViewPane {
 			syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			if (SyntDict)
-				(this.debugService as DebugService).LastDesyntProg = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+				(this.debugService as DebugService).LastDesyntProg = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 
 			this.notificationSer.info(`Successully synthesized program for line: ${line}`);
 		}
