@@ -39,9 +39,8 @@ class Vin(Annotatable):
 
         """
         ...
-        # num = num.strip().upper()
-        # num = ??
-        return num
+        validated_num = num
+        return validated_num
 
     def verify_checksum(self, *, check_year: bool = True) -> bool:
         """Performs checksum verification.

@@ -1,6 +1,4 @@
 """
-        # uregency = len + imp - (total_resources // res)
-
 Scheduler program where the user needs to create a function that decides which job/action needs to be carried out next.
     => Interdependency since each choice is influenced by previous choices
 
@@ -60,7 +58,7 @@ class Scheduler:
 
     @staticmethod
     def ranking(leng, imp, res) -> int:
-        urgency = imp + (leng - total_resources // res)
+        urgency = ??
         return urgency
 
     def fetch_next_job(self) -> Generator[Job, None, None]:

@@ -7,8 +7,6 @@ from matplotlib.patches import Circle
 
 np.random.seed(4)
 
-# TODO: Requires numpy functions for synthesis
-
 
 def ensure_inbounds(positions: npt.NDArray, radius: int, bounds: list[int]):
     inbound_positions = ??
@@ -43,7 +41,8 @@ class Model:
     def move(self) -> None:
         steps = np.random.randint(-1, 2, size=(self.num_circles, 2))
         new_agent_positions = self.agents + steps
-        self.agents = ensure_inbounds(new_agent_positions, self.diameter/2, self.bounds)
+        #self.agents = new_agent_positions
+        self.agents = ensure_inbounds(new_agent_positions, int(self.diameter/2), self.bounds)
 
     def draw(self) -> None:
         for a, c in zip(self.agents, self.circles):

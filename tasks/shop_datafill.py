@@ -1,11 +1,12 @@
 """
-New shop owner, have 5? examples of how old owner prices apples based on quality. Task is to reverse engineer the function that produced the price via writing the get_quality function
+New shop owner, have 10 examples of how old owner prices apples based on quality. Task is to reverse engineer the function that produced the price via writing the get_quality function
 
 Given the following examples, recreated the function that produces the correct price for an apple:
 """
 
 from collections import deque
 import statistics
+from math import floor
 
 
 sweetness_last_10 = deque(maxlen=10)
@@ -37,13 +38,14 @@ class Shop:
 
     @staticmethod
     def get_quality(
-        weight: int, sweetness: int, juiciness: int, acidity: int
+        weight: int, sweetness: int, juiciness: int, acidity: int , ref_quality: str
     ) -> int:
-        quality = sweetness + (acidity // weight - avg_sweetness)
+        quality = ??
         return quality
 
     def price(self, apple: list[int]) -> float:
-        quality = self.get_quality(*apple)
+        quality = self.get_quality(*apple,self.references[0][1] if len(self.references)>0  else None)
+        self.references=self.references[1:]
         self.update_avg_quality(quality)
         return quality * 3.14
 
@@ -51,7 +53,7 @@ class Shop:
     def update_avg_quality(qual) -> None:
         global avg_sweetness 
         sweetness_last_10.append(qual)
-        avg_sweetness = round(statistics.mean(sweetness_last_10))
+        avg_sweetness = floor(statistics.mean(sweetness_last_10))
 
     def total_price(self, apple: list[int]) -> float:
         base_price = self.price(apple)

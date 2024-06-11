@@ -39,12 +39,12 @@ def test_basic():
 def test_checksum():
 
     assert Vin("1M8GDM9AXKP042788").verify_checksum()
-    assert Vin("1M8GDM9AyKP042788").verify_checksum()
-    assert Vin(" 1M8GDM9AYKP042788").verify_checksum()
-    assert Vin("1M8GdM9AYKP042788").verify_checksum()
-    assert Vin("\t1M8GDM9AYKP042788\t").verify_checksum()
-    assert Vin(" N3KLR5Ul2EM000356").verify_checksum()
-    assert Vin("m8DHm9iXUP085263\n").verify_checksum()
+    assert not Vin("1M8GDM9AyKP042788").verify_checksum()
+    assert Vin("\t1M8GDM9AXKP042788\t").verify_checksum()
+    assert not Vin(" 1M8GDM9AYKP042788").verify_checksum()
+    assert Vin("1M8GdM9AXKP042788").verify_checksum()
+    assert Vin(" 5N1AN08U86C503579").verify_checksum()
+    assert Vin("2C3CDYBT8EH395611\n").verify_checksum()
 
     # non strict
     non_strict = Vin("WBA71DC010CH14720")
