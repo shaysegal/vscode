@@ -214,6 +214,8 @@ export class DeSyntView extends ViewPane {
 							this.notificationSer.info('Cancled');
 						} else if (e.message === 'No sketches provided') {
 							this.notificationSer.info('No sketches provided');
+						} else if (e.message === 'Timeout') {
+							this.notificationSer.warn('Synthesizer Timeout, check input values for mistakes');
 						}
 						else {
 							this.notificationSer.warn('Synthesizer Failed , check logs for additional data');
