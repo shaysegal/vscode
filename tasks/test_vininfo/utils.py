@@ -17,7 +17,7 @@ def merge_wmi(new_wmis: dict) -> Tuple[set, str]:
     import inspect
     import re
 
-    from .dicts import wmi
+    from test_vininfo.dicts import wmi
 
     wmi_src = re.search('WMI = {([^}]+)}', inspect.getsource(wmi), re.MULTILINE)
 

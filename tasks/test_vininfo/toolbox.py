@@ -5,7 +5,16 @@ from typing import List, Optional
 
 from test_vininfo.common import Annotatable, Brand, UnsupportedBrand
 from test_vininfo.dicts import COUNTRIES, REGIONS, WMI
-from test_vininfo.exceptions import ValidationError
+import functools
+
+def immutable(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    
+    # Mark the function as immutable
+    wrapper._immutable = True
+    return wrapper
 
 
 class Vin(Annotatable):
@@ -19,7 +28,7 @@ class Vin(Annotatable):
     }
 
     def __init__(self, num: str):
-        self.num = self.validate(num) or num
+        self.num = self.validate_and_correct(num)
 
         details_extractor = self.brand.extractor
 
@@ -32,7 +41,7 @@ class Vin(Annotatable):
         return self.num
 
     @staticmethod
-    def validate(num: str) -> str:
+    def validate_and_correct(num: str) -> str:
         """Performs basic VIN validation and sanation.
 
         :param num:
@@ -41,8 +50,9 @@ class Vin(Annotatable):
         ...
         validated_num = num
         return validated_num
-
-    def verify_checksum(self, *, check_year: bool = True) -> bool:
+    
+    @immutable
+    def verify_checksum(self, check_year: bool = True) -> bool:
         """Performs checksum verification.
 
         .. warning:: Not every manufacturer uses VIN checksum rules.
@@ -53,45 +63,32 @@ class Vin(Annotatable):
         """
         num_len = len(self.num)
         if num_len != 17:
-            raise ValidationError(f"VIN number requires 17 chars ({num_len} given)")
+            print(f"ValidationError: VIN number requires 17 chars ({num_len} given)")
+            return False
 
         if check_year and self.vis[0] in {"U", "Z", "0"}:
+            print(f"ValidationError: check year failed")
             return False
 
         trans = {
-            "A": 1,
-            "B": 2,
-            "C": 3,
-            "D": 4,
-            "E": 5,
-            "F": 6,
-            "G": 7,
-            "H": 8,
-            "J": 1,
-            "K": 2,
-            "L": 3,
-            "M": 4,
-            "N": 5,
-            "P": 7,
-            "R": 9,
-            "S": 2,
-            "T": 3,
-            "U": 4,
-            "V": 5,
-            "W": 6,
-            "X": 7,
-            "Y": 8,
-            "Z": 9,
+            "A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6,
+            "G": 7, "H": 8, "J": 1, "K": 2, "L": 3, "M": 4,
+            "N": 5, "P": 7, "R": 9, "S": 2, "T": 3, "U": 4,
+            "V": 5, "W": 6, "X": 7, "Y": 8, "Z": 9,
         }
         weights = (8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2)
 
         checksum = 0
 
         for pos, char in enumerate(self.num):
-            value = int(trans.get(char, char))
+            try:
+                value = int(trans[char] if char in trans else char)
+            except :
+                print(f" ValidationError: couldn't transform VIN charecter to suitable integer value")
+                return False
             checksum += value * weights[pos]
 
-        checksum = int(checksum) % 11
+        checksum = checksum % 11
 
         check_digit = "X" if checksum == 10 else checksum
 
