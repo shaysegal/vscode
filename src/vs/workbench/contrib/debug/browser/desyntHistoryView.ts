@@ -707,8 +707,13 @@ export class DesyntHistoryView extends ViewPane {
 				const wrapperFrame = thread?.getCallStack().find(f => f.name === 'like_runpy');
 				const focusedStackFrame = this.debugService.getViewModel().focusedStackFrame;
 
+				// TODO: filter localScope
 				const localScope = await desyntScope!.find(s => s.name === 'Locals')?.getChildren()!;
-				const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
+				const safeLocalScope = localScope.filter(
+					s =>
+						!['function', 'self'].includes(s.name) &&
+						!['{'].includes(s.value[0])
+				);
 				const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
 
 				const globalScope = await desyntScope!.find(s => s.name === 'Globals')?.getChildren()!;
