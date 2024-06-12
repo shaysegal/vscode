@@ -263,7 +263,7 @@ def alter__a__(current_line, locals_state, globals_state):
     # Should never be reached given code in continuation
     if not synt_dict:
         raise AssertionError("Must supply a valid sketch value")
-    if "solution" in synt_dict[current_line]:
+    if "solution" in synt_dict[current_line] and (not("overrideValue" in synt_dict[current_line]) or synt_dict[current_line]['overrideValue'] is None):
         return try_get_solution(locals_state, globals_state, current_line)
     else:
         return_value = sketchValueContainer.sketchValue
