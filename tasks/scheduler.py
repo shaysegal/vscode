@@ -54,6 +54,7 @@ class Scheduler:
     #       =: But maybe too much freedom/synthesiser cannot handle this
     def get_next_job(self, remaining_jobs: List[Job]) -> Job:
         for j in remaining_jobs:
+            _job_evaluation = self.evaluator.eval_jobs(j)
             j.current_urgency = self.ranking(*j)
         return max(remaining_jobs, key=lambda j: j.current_urgency)
 
@@ -61,13 +62,12 @@ class Scheduler:
 
     @staticmethod
     def ranking(leng, imp, res) -> int:
-        urgency = 1
+        urgency = 1  # ??
         return urgency
 
     def fetch_next_job(self):  # -> Generator[Job, None, None]:
         global total_resources
         next_job = self.get_next_job(self.jobs)
-        _job_evaluation = self.evaluator.eval_jobs(next_job)
         total_resources -= next_job.resource_requirement
         self.jobs.remove(next_job)
         yield next_job
