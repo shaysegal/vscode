@@ -238,8 +238,8 @@ def update_synt_dict(locals_state_json, global_state_json, value, current_line):
 def try_get_solution(locals_state, globals_state, current_line):
     preserved_local_state = get_preserved_local_state(locals_state)
     try:
-        print("debug solution ", synt_dict[current_line]["solution"])
-        print("debug preserved_local_state ", preserved_local_state)
+        #print("debug solution ", synt_dict[current_line]["solution"])
+        #print("debug preserved_local_state ", preserved_local_state)
         output = eval(
             synt_dict[current_line]["solution"],
             copy.deepcopy(preserved_local_state),

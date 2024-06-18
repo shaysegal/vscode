@@ -51,7 +51,6 @@
 	color: var(--vscode-editor-inlineValuesForeground) !important;
 	background-color: var(--vscode-editorGhostText-background);
 	border: 1px solid var(--vscode-editorGhostText-border);
-	margin-left: -1.1em;
 	font-style: italic;
 }
 
@@ -59,7 +58,6 @@
 	color: var(--vscode-editor-inlineValuesForeground) !important;
 	background-color: var(--vscode-editorGhostText-background);
 	border: 1px solid var(--vscode-editorGhostText-border);
-	margin-left: -1.1em;
 	text-decoration: line-through;
 	font-style: italic;
 }

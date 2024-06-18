@@ -889,10 +889,13 @@ export class TextAreaHandler extends ViewPart {
 			if (hole) {
 				const suggestedProgram = document.getElementsByClassName("desynt-ghost-text-decoration-preview")
 				const suggestedProgramStriked = document.getElementsByClassName("desynt-ghost-text-decoration-preview-striked")
-				if (suggestedProgram.length > 0 || suggestedProgramStriked.length > 0)
+				if (suggestedProgram.length > 0 || suggestedProgramStriked.length > 0) {
 					hole.style.opacity = "0";
+					hole.style.marginRight = "-1.1em";
+				}
 				else {
 					hole.style.opacity = "100";
+					hole.style.marginRight = "0em";
 				}
 			}
 		}

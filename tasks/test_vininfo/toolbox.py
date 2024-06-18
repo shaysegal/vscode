@@ -11,7 +11,7 @@ def immutable(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
-    
+
     # Mark the function as immutable
     wrapper._immutable = True
     return wrapper
@@ -28,7 +28,7 @@ class Vin(Annotatable):
     }
 
     def __init__(self, num: str):
-        self.num = self.validate_and_correct(num)
+        self.num = num
 
         details_extractor = self.brand.extractor
 
@@ -40,17 +40,17 @@ class Vin(Annotatable):
     def __str__(self):
         return self.num
 
-    @staticmethod
-    def validate_and_correct(num: str) -> str:
+    def validate_and_correct(self) -> str:
         """Performs basic VIN validation and sanation.
 
         :param num:
 
         """
         ...
-        validated_num = num
-        return validated_num
-    
+        validated_num = self.num
+        self.num = ??
+        return self
+
     @immutable
     def verify_checksum(self, check_year: bool = True) -> bool:
         """Performs checksum verification.

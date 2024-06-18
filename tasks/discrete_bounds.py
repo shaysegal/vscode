@@ -8,7 +8,7 @@ from matplotlib.patches import Circle
 np.random.seed(4)
 
 
-def ensure_inbounds(positions: list[list[int]], radius: int, bounds: list[int]):
+def ensure_inbounds(future_positions: list[list[int]], ball_radius: int, bounds: list[int]):
     inbound_positions = ??
     return inbound_positions
 

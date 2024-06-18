@@ -948,19 +948,28 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 					allDecorations.push(...desyntDecoration);
 				}
 				if (current_range.containsPosition(new Position(decoration.line, 1))) {
+					const sketch_line = current_range.startLineNumber;
+					const futureValue = await this.getDesyntFutureValue(sketch_line);
+					if (objSyntDict[sketch_line].hasOwnProperty(solutionKey) && futureValue && futureValue.body && futureValue.body.result) {
 
-					if (sketchValueInline) {
-						// const futureValue = await this.getDesyntFutureValue(decoration.line);
-						// if (futureValue && futureValue.body && futureValue.body.result) {
-						// 	const futureDecoration = createFutureInlineValueDecoration(decoration.line, futureValue.body.result);
-						// 	allDecorations.push(...futureDecoration);
-						// }
-						const model = this.editor.getModel();
-						const lineVal = model!.getLineContent(decoration.line).trimStart();
-						const sketchDecoration = createInlineSketchDecoration(decoration.line, lineVal?.replace('??', objSyntDict[decoration.line]['output'].at(-1)));
-						allDecorations.push(...sketchDecoration);
+						if (suggestedValueAsComment) {
+							this.createSuggestedValuesComment(sketch_line, futureValue);
+						} else if (sketchValueInline) {
+							// const futureDecoration = createFutureInlineValueDecoration(sketch_line, futureValue.body.result);
+							const model = this.editor.getModel();
+							const lineVal = model!.getLineContent(sketch_line).trimStart();
+							const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', futureValue.body.result));
+							allDecorations.push(...sketchDecoration);
 
-						allDecorations.splice(0, allDecorations.length, ...allDecorations.filter(decoration => !(decoration.options.description === 'debug-inline-value-decoration' && (current_range.startLineNumber === decoration.range.startLineNumber || current_range.endLineNumber === decoration.range.endLineNumber))));
+						}
+					} else {
+						if (sketchValueInline) {
+							const model = this.editor.getModel();
+							const lineVal = model!.getLineContent(sketch_line).trimStart();
+							const replacement = objSyntDict[sketch_line]['output'].at(-1);
+							const sketchDecoration = createInlineSketchDecoration(sketch_line, lineVal?.replace('??', JSON.stringify(replacement)));
+							allDecorations.push(...sketchDecoration);
+						}
 					}
 				}
 			}
