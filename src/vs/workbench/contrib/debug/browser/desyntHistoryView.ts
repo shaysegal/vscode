@@ -682,7 +682,8 @@ export class DesyntHistoryView extends ViewPane {
 		// let currentParentItem: DesyntHistoryTreeItem;
 		const parentKey = this.keyIteration.toString();
 		const parentItem = new DesyntHistoryTreeItem(root, 'iteration ' + this.keyIteration.toString());
-		root.create(parentKey, parentItem);
+		// root.create(parentKey, parentItem);
+		root.createIfNeeded(parentKey, () => parentItem);
 		const currentParentItem = parentItem;
 		//add input items:
 		// TODO: must fix
