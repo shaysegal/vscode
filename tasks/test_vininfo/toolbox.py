@@ -46,9 +46,9 @@ class Vin(Annotatable):
         :param num:
 
         """
-        ...
-        validated_num = self.num
-        self.num = ??
+        unvalidated_num = self.num
+        validated_num = unvalidated_num
+        self.num = validated_num
         return self
 
     @immutable

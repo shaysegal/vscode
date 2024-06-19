@@ -884,18 +884,20 @@ export class TextAreaHandler extends ViewPart {
 			}
 		}
 		const holeElement = document.getElementsByClassName("mtk10")
-		if (holeElement.length == 1) {
-			const hole = holeElement[0] as HTMLElement;
-			if (hole) {
-				const suggestedProgram = document.getElementsByClassName("desynt-ghost-text-decoration-preview")
-				const suggestedProgramStriked = document.getElementsByClassName("desynt-ghost-text-decoration-preview-striked")
-				if (suggestedProgram.length > 0 || suggestedProgramStriked.length > 0) {
-					hole.style.opacity = "0";
-					hole.style.marginRight = "-1.1em";
-				}
-				else {
-					hole.style.opacity = "100";
-					hole.style.marginRight = "0em";
+		for (let element of holeElement) {
+			if (element.parentElement instanceof HTMLSpanElement) {
+				const hole = element as HTMLElement;
+				if (hole) {
+					const suggestedProgram = document.getElementsByClassName("desynt-ghost-text-decoration-preview")
+					const suggestedProgramStriked = document.getElementsByClassName("desynt-ghost-text-decoration-preview-striked")
+					if (suggestedProgram.length > 0 || suggestedProgramStriked.length > 0) {
+						hole.style.opacity = "0";
+						hole.style.marginRight = "-1.1em";
+					}
+					else {
+						hole.style.opacity = "100";
+						hole.style.marginRight = "0em";
+					}
 				}
 			}
 		}

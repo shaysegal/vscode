@@ -62,7 +62,7 @@ class Scheduler:
 
     @staticmethod
     def ranking(leng, imp, res) -> int:
-        urgency = 1  # ??
+        urgency = ??
         return urgency
 
     def fetch_next_job(self):  # -> Generator[Job, None, None]:
@@ -77,10 +77,10 @@ class Scheduler:
             yield from self.fetch_next_job()
 
 
-if __name__ == "__main__":
-    with open("data/jobs.json", "r") as f:
-        js = json.load(f)
-        s = Scheduler(js)
 
-    for j in s.schedule():
-        print(f"The next job is: {j.name:<25} {'lasting:':>10} {j.length} time")
+with open("data/jobs.json", "r") as f:
+	js = json.load(f)
+	s = Scheduler(js)
+
+for j in s.schedule():
+	print(f"The next job is: {j.name:<25} {'lasting:':>10} {j.length} time")

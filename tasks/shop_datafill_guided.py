@@ -46,6 +46,7 @@ class Shop:
         sweetness = get_sweetness(apple)
         juiciness = get_juiciness(apple)
         acidity = get_acidity(apple)
+        reference_quality = self.references[0]
         quality = self.get_quality(weight, sweetness, juiciness, acidity)
         self.references=self.references[1:]
         return quality * 3.14
