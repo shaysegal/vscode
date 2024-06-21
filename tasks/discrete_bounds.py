@@ -26,8 +26,8 @@ class Model:
         self.fig, ax = plt.subplots()
         ax.set_xlim(self.bounds[0], self.bounds[1])
         ax.set_ylim(self.bounds[0], self.bounds[1])
-        ax.set_yticks(np.arange(0, self.bounds[1], 3))
-        ax.set_xticks(np.arange(0, self.bounds[1], 3))
+        ax.set_yticks(np.arange(0, self.bounds[1]+1, 2))
+        ax.set_xticks(np.arange(0, self.bounds[1]+1, 2))
 
         circles = []
         for a in self.agents:
