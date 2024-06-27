@@ -1090,13 +1090,13 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				return;
 			}
 			// If user continues with same sketch value, we want to capture that in the desynt history view
-			storageService.desyntIteration += 1;
 			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
 			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
 			if (value === undefined && storageService.desyntIteration > 0) {
 				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
 				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
+			storageService.desyntIteration += 1;
 
 			if (doesTrigger) {
 				await getThreadAndRun(accessor, context, thread => thread.continue());

@@ -569,6 +569,7 @@ export class DesyntHistoryView extends ViewPane {
 					this.storageService.remove(desired_key, StorageScope.APPLICATION);
 					if (root.getChild(this.keyIteration.toString())) {
 						this.keyIteration += 1;
+						this.tree.collapseAll();
 					}
 				}
 				if (e === State.Inactive || e === State.Initializing) {
@@ -679,12 +680,13 @@ export class DesyntHistoryView extends ViewPane {
 	}
 	async addChangeToDesyntView(root: RootTreeItem, value: string) {
 		const key = this.keyIteration.toString() + ',' + '0';
-		// let currentParentItem: DesyntHistoryTreeItem;
+		let currentParentItem: DesyntHistoryTreeItem;
 		const parentKey = this.keyIteration.toString();
 		const parentItem = new DesyntHistoryTreeItem(root, 'iteration ' + this.keyIteration.toString());
-		// root.create(parentKey, parentItem);
-		root.createIfNeeded(parentKey, () => parentItem);
-		const currentParentItem = parentItem;
+		root.create(parentKey, parentItem);
+		currentParentItem = parentItem;
+
+		// root.createIfNeeded(parentKey, () => parentItem);
 		//add input items:
 		// TODO: must fix
 		// const scopes = await this.debugService.getViewModel().focusedStackFrame?.getScopes();
