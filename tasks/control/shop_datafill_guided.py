@@ -1,5 +1,5 @@
 """
-New shop owner, have 10 examples of how old owner prices apples based on quality. 
+New shop owner, have 10 examples of how old owner prices apples based on quality.
 Task is to reverse engineer the function that produced the price via writing the get_quality function
 Given the following examples, recreated the function that produces the correct price for an apple:
 """
@@ -34,8 +34,7 @@ class Shop:
 
     @staticmethod
     def get_quality(weight: int, sweetness: int, juiciness: int, acidity: int ) -> int:
-        # the quality is calculated by a combination of the apple properties.
-        quality = ??
+        quality = weight*(sweetness+juiciness) - acidity
         return quality
 
     def price(self, apple: list[int]) -> float:
@@ -43,7 +42,7 @@ class Shop:
         sweetness = get_sweetness(apple)
         juiciness = get_juiciness(apple)
         acidity = get_acidity(apple)
-        reference_quality = self.references[0]
+        reference_quality = self.references[0] if self.references else None
         quality = self.get_quality(weight, sweetness, juiciness, acidity)
         self.references=self.references[1:]
         return quality * 3.14

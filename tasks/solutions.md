@@ -1,11 +1,11 @@
 ### Discrete bounds
-```python	
+```python
 inbound_positions = np.clip(positions, 1, np.subtract(bounds, 1)[1]).tolist()
 ```
 
 ### Scheduler
 ```python
-urgency = leng + imp - (total_resources // res)
+urgency = length + importamce- (total_resources // resources)
 ```
 
 ### VIN:

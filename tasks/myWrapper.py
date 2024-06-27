@@ -71,6 +71,8 @@ class MyImportHook:
         #python_path = os.environ.get('PYTHONPATH', '')
         python_path = "."
         for p_path in iterate_subdirectories(python_path):
+            if p_path == "controll":
+                continue
             full_path = os.path.join(p_path,os.path.join(*fullname.split("."))+".py")
             if os.path.exists(full_path):
                 return True

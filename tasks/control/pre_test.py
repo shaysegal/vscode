@@ -9,6 +9,6 @@ import random
 def g():
     while True:
         c = random.randint(1, 8)
-        assert f() <= 40
+        assert f() < 40
 if __name__ == "__main__":
     g()
