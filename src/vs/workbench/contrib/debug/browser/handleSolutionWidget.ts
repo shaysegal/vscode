@@ -88,7 +88,7 @@ export class HandleSolutionWidget extends ZoneWidget {
 
 	// TODO: make the actionbar and headElement on same line
 	protected _fillHead(): void {
-		this._headElement!.innerText = 'Accept suggestion be closing?';
+		this._headElement!.innerText = 'Would you like to accept suggettion ending debug session?';
 		const actionsContainer = dom.$('.handleSolution-actions');
 		dom.append(this._headElement!, actionsContainer);
 

@@ -1247,6 +1247,13 @@ export class DebugSession implements IDebugSession {
 			const codeEditor = this.codeEditorService?.getActiveCodeEditor()!;
 			const codeEditorContribution = codeEditor.getContribution<IDebugEditorContribution>(EDITOR_CONTRIBUTION_ID)! as DebugEditorContribution;
 			const line = codeEditor?.getModel()?.getLinesContent().findIndex(s => s.includes('??'))!;
+			if (line == -1) {
+				this.initialized = true;
+				this.model.setBreakpointSessionData(this.getId(), this.capabilities, undefined);
+				this.shutdown();
+				this._onDidEndAdapter.fire(event);
+				return
+			}
 			const handleSolutionWidget = this.instantiationService.createInstance(HandleSolutionWidget, codeEditor);
 			handleSolutionWidget.show({ lineNumber: line + 1, column: 10 }, 0);
 			handleSolutionWidget.focus();
