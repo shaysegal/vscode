@@ -4,7 +4,7 @@ in this pre test the user has two tasks:
 1) fix an assert statement
 2) using the debugger environment and without chagning the code, get the value of f() when c == 5
 '''
-from pre_test_aux import f
+from pre_test import f
 import random
 def g():
     while True:

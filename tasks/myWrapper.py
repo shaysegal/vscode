@@ -317,7 +317,7 @@ def _get_code_from_file(run_name, path_name):
 
 
 def like_runpy(code_file_path, init_globals=None, run_name=None):
-    run_name = "<run_path>"
+    run_name = "__main__"
     pkg_name = run_name.rpartition(".")[0]
     code, fname = _get_code_from_file(run_name, code_file_path)
     #return runpy._run_module_code(

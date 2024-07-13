@@ -1,16 +1,19 @@
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 from matplotlib.patches import Circle
-
 np.random.seed(4)
 
+#alias 
+Circle_XY_Posions = list[int]
 
-def ensure_inbounds(future_positions: list[list[int]], ball_radius: int, bounds: list[int]):
-    inbound_positions = ??
-    return inbound_positions
+
+
+def ensure_inbounds(future_positions: list[Circle_XY_Posions], ball_radius: int, bounds: Tuple[int,int])->list[List[Circle_XY_Posions]]:
+    raise NotImplementedError
+    return ret
 
 
 class Model:
@@ -56,7 +59,5 @@ class Model:
             self.move()
             self.draw()
 
-
-# if __name__ == "__main__":
 model = Model(3, 2, [0, 10])
 model.run()

@@ -140,7 +140,7 @@ export class DeSyntView extends ViewPane {
 
 		const expressionsRenderer = this.instantiationService.createInstance(WatchExpressionsRenderer);
 		const linkeDetector = this.instantiationService.createInstance(LinkDetector);
-		const buttonLabel = localize('Synthesize', 'Synthesize');
+		const buttonLabel = localize('Generate', 'Generate');
 		const button = this._register(new Button(treeContainer, { title: buttonLabel, ...defaultButtonStyles }));
 		this.tree = <WorkbenchAsyncDataTree<IDebugService | IExpression, IExpression, FuzzyScore>>this.instantiationService.createInstance(WorkbenchAsyncDataTree, 'WatchExpressions', treeContainer, new WatchExpressionsDelegate(), [expressionsRenderer, this.instantiationService.createInstance(VariablesRenderer, linkeDetector)],
 			new WatchExpressionsDataSource(), {

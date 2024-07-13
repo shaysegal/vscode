@@ -40,13 +40,14 @@ class Vin(Annotatable):
     def __str__(self):
         return self.num
 
-    def validate_and_correct(self) -> str:
+    def validate_and_correct(self):
         """Performs basic VIN validation and sanation.
 
         :param num:
 
         """
         unvalidated_num = self.num
+        #TODO: add the correction part...
         validated_num = unvalidated_num
         self.num = validated_num
         return self

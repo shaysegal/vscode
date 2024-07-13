@@ -27,5 +27,19 @@
                 "PYTHONPATH": ".:./test_vininfo"
             }
         },
+        {
+            "name": "Python: Vin Task",
+            "type": "python",
+            "request": "launch",
+            "program": "myWrapper.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "./test_vininfo/run_tests.py"
+            ],
+            "env": {
+                "PYTHONPATH": ".:./test_vininfo"
+            }
+        },
     ]
 }

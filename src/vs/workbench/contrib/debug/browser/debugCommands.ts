@@ -1041,7 +1041,7 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 		localDesyntView.progressSer.withProgress({
 			location: ProgressLocation.Explorer,
 			delay: 750,
-			title: nls.localize('synthesizingSketch', "Running synthesizer..."),
+			title: nls.localize('synthesizingSketch', "Running generator..."),
 			cancellable: false,
 		}, async () => { // task
 			codeEditorContribution.showTriggerlessWidget(currentLine, currentCodeLine.indexOf('??') + 1);

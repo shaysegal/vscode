@@ -10,7 +10,6 @@ The order I would like is the following, where numbers represent the indexed pos
 
 # TODO: Ordering needs to be calculated properly given some function over the jobs
 
-from collections.abc import Generator
 from dataclasses import dataclass
 from typing import List
 import json
@@ -20,12 +19,11 @@ total_resources = 10
 
 class Evaluator:
     def __init__(self) -> None:
-        self.eval_license = b"KG5leHRfam9iLm5hbWUsIG5leHRfam9iLmxlbmd0aCArIG5leHRfam9iLmltcG9ydGFuY2UgLSAodG90YWxfcmVzb3VyY2VzIC8vIG5leHRfam9iLnJlc291cmNlX3JlcXVpcmVtZW50KSk="
+        self.eval_license = b'am9iLm5hbWUsIGpvYi5sZW5ndGggKyBqb2IuaW1wb3J0YW5jZSAtICh0b3RhbF9yZXNvdXJjZXMgLy8gam9iLnJlc291cmNlX3JlcXVpcmVtZW50KQ=='
         print("license will expire tomorrow")
 
-    def eval_jobs(self, next_job):
+    def eval_job(self, job):
         import base64
-
         return eval(base64.b64decode(self.eval_license))
 
 
@@ -35,7 +33,7 @@ class Job:
     length: int
     importance: int
     resource_requirement: int
-    current_urgency: int = -1
+    current_urgency: int = None
 
     def __iter__(self):
         return iter((self.length, self.importance, self.resource_requirement))
@@ -49,23 +47,18 @@ class Scheduler:
     def extract_jobs(self, jobs: dict) -> List[Job]:
         return [Job(**j) for j in jobs.values()]
 
-    # TODO: do we give this with code or empty
-    #   -> Empty allows for more realistic exploratory debugging
-    #       =: But maybe too much freedom/synthesiser cannot handle this
     def get_next_job(self, remaining_jobs: List[Job]) -> Job:
         for j in remaining_jobs:
-            _job_evaluation = self.evaluator.eval_jobs(j)
+            _job_evaluation = self.evaluator.eval_job(j)
             j.current_urgency = self.ranking(*j)
         return max(remaining_jobs, key=lambda j: j.current_urgency)
 
-        # raise NotImplemented
-
     @staticmethod
-    def ranking(leng, imp, res) -> int:
-        urgency = ??
-        return urgency
+    def ranking(length, importence, resources) -> int:
+        raise NotImplementedError
+        return rank
 
-    def fetch_next_job(self):  # -> Generator[Job, None, None]:
+    def fetch_next_job(self):  
         global total_resources
         next_job = self.get_next_job(self.jobs)
         total_resources -= next_job.resource_requirement
