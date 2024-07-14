@@ -647,6 +647,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		if (doStopSession) {
 			//only needed when called from the button
 			await debugService.stopSession(session, false, false);
+			(debugService as DebugService).LastDesyntProg = undefined
 		}
 	}
 });

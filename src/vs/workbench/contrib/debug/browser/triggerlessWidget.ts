@@ -72,7 +72,7 @@ export class TriggerlessWidget extends ZoneWidget {
 		dom.append(title, label);
 		const actions = $('.actions');
 		dom.append(title, actions);
-		label.textContent = nls.localize('exceptionThrown', 'Synthesizing...');
+		label.textContent = nls.localize('exceptionThrown', 'Generating...');
 		const ariaLabel = label.textContent;
 
 		const actionBar = new ActionBar(actions);

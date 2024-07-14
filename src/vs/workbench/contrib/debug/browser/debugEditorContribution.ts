@@ -374,6 +374,9 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			this._wordToLineNumbersMap = undefined;
 			this.updateInlineValuesScheduler.schedule();
 		}));
+		this.toDispose.push(this.debugService.onDidEndSession(() => {
+			this.oldDecorations.clear();
+		}));
 		this.toDispose.push(this.debugService.getViewModel().onWillUpdateViews(() => this.updateInlineValuesScheduler.schedule()));
 		this.toDispose.push(this.debugService.getViewModel().onDidEvaluateLazyExpression(() => this.updateInlineValuesScheduler.schedule()));
 		this.toDispose.push(this.editor.onDidChangeModel(async () => {
@@ -1048,13 +1051,18 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		// const safeLocalScope = localScope.filter(s => !s.name.includes('function'));
 		// const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
 		const evaluation = `ad_hoc_eval_solution(${line_number}, locals())`;
-		if (session && focusedStackFrame) {
-			const evaluationResult = await session.evaluate(evaluation, focusedStackFrame.frameId);
-			if (evaluationResult) {
-				return evaluationResult;
+		try {
+			if (session && focusedStackFrame) {
+				const evaluationResult = await session.evaluate(evaluation, focusedStackFrame.frameId);
+				if (evaluationResult) {
+					return evaluationResult;
+				}
 			}
+			return undefined;
+		} catch (e) {
+			return undefined;
 		}
-		return undefined;
+
 	}
 
 	private async getDesyntInsight(stackFrame: IStackFrame): Promise<DebugProtocol.EvaluateResponse | undefined> {
