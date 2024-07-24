@@ -1,24 +1,15 @@
-import random
-import string
+from pre_test_aux import generate_random_string,save_string,get_storage_array_representation
 
-def generate_string():
-    length = random.randint(5, 10)
-    return ''.join(random.choices(string.ascii_letters, k=length))
-
-def process_string(s):
-    vowels = 'AEIOUaeiou'
-    return ''.join([char for char in s if char not in vowels])
-
-def test_function():
-    for _ in range(10):
-        s = generate_string()
-        result = process_string(s)
-        assert len(result) < len(s)
+def populate_storage(number_of_strings:int)->list:
+	"""
+	populate storage with random {number_of_strings} strings
+	"""
+	for i in range(number_of_strings):
+		s = generate_random_string(minimum_length=5,maximum_length=10)
+		stored_result = save_string(s)
+		print(f"finished processed iteration {i}")
+	storage_array = get_storage_array_representation()
+	return storage_array
 
 if __name__ == "__main__":
-    test_function()
-
-
-def initials(name)->str:
-	raise NotImplementedError
-	return result
+    result = populate_storage(10)

@@ -698,11 +698,22 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			}
 			// If user continues with same sketch value, we want to capture that in the desynt history view
 			storageService.desyntIteration += 1;
+			const debugSession = debugService.getViewModel().focusedSession;
 			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
 			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
 			if (value === undefined && storageService.desyntIteration > 0) {
+				let has_generated_solution = false;
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
+				let SyntDictJson = undefined
+				if (debugSession) {
+					const SyntDict = await debugSession.evaluate(syntDictEvaluation, sf.frameId);
+					if (SyntDict) {
+						SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+						has_generated_solution = 'generated_solution' in SyntDictJson[sf.range.startLineNumber]
+					}
+				}
 				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
-				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+				storageService.store(desiredKey, has_generated_solution ? SyntDictJson[sf.range.startLineNumber]['generated_solution'] : storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
 
 			if (doesTrigger) {
@@ -806,9 +817,20 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			storageService.desyntIteration += 1;
 			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
 			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
+			const debugSession = debugService.getViewModel().focusedSession;
 			if (value === undefined && storageService.desyntIteration > 0) {
+				let has_generated_solution = false;
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
+				let SyntDictJson = undefined
+				if (debugSession) {
+					const SyntDict = await debugSession.evaluate(syntDictEvaluation, sf.frameId);
+					if (SyntDict) {
+						SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+						has_generated_solution = 'generated_solution' in SyntDictJson[sf.range.startLineNumber]
+					}
+				}
 				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
-				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+				storageService.store(desiredKey, has_generated_solution ? SyntDictJson[sf.range.startLineNumber]['generated_solution'] : storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
 
 			if (doesTrigger) {
@@ -1093,9 +1115,20 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 			// If user continues with same sketch value, we want to capture that in the desynt history view
 			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
 			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
+			const debugSession = debugService.getViewModel().focusedSession;
 			if (value === undefined && storageService.desyntIteration > 0) {
+				let has_generated_solution = false;
+				const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
+				let SyntDictJson = undefined
+				if (debugSession) {
+					const SyntDict = await debugSession.evaluate(syntDictEvaluation, sf.frameId);
+					if (SyntDict) {
+						SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
+						has_generated_solution = 'generated_solution' in SyntDictJson[sf.range.startLineNumber]
+					}
+				}
 				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
-				storageService.store(desiredKey, storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
+				storageService.store(desiredKey, has_generated_solution ? SyntDictJson[sf.range.startLineNumber]['generated_solution'] : storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
 			storageService.desyntIteration += 1;
 

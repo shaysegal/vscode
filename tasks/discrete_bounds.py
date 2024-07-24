@@ -6,12 +6,12 @@ import numpy.typing as npt
 from matplotlib.patches import Circle
 np.random.seed(4)
 
-#alias 
-Circle_XY_Posions = list[int]
+#alias
+Circle_XY_Positions = list[int]
 
 
 
-def ensure_inbounds(future_positions: list[Circle_XY_Posions], ball_radius: int, bounds: Tuple[int,int])->list[List[Circle_XY_Posions]]:
+def ensure_inbounds(future_positions: list[Circle_XY_Positions], ball_radius: int, bounds: Tuple[int,int])->list[List[Circle_XY_Positions]]:
     raise NotImplementedError
     return ret
 
