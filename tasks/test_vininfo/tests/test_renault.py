@@ -3,7 +3,7 @@ from test_vininfo.toolbox import Vin
 
 def test_renault():
 
-    vin = Vin("VF14SRAP451234567").validate_and_correct()
+    vin = Vin("VF14SRAP451234567")
 
     assert "%s" % vin
     assert vin.wmi == "VF1"
@@ -32,7 +32,7 @@ def test_renault():
 
 
 def test_bogus():
-    vin = Vin("VF1KG1PBE34488860").validate_and_correct()
+    vin = Vin("VF1KG1PBE34488860")
     details = vin.details
     assert details.engine.code == ""
     assert not details.engine

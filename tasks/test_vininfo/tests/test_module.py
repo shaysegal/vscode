@@ -14,24 +14,29 @@ def test_basic():
 
 
 def test_checksum():
-
-    assert Vin("1M8GDM9AXKP042788").validate_and_correct().verify_checksum()
-    assert Vin("1M8GDM9AxKP042788").validate_and_correct().verify_checksum()
-    assert Vin("\t1M8GDM9AXKP042788\t").validate_and_correct().verify_checksum()
-    assert not Vin(" 1M8GDM9AYKP042788").validate_and_correct().verify_checksum()
-    assert Vin("1M8GdM9AXKP042788").validate_and_correct().verify_checksum()
-    assert Vin(" 5N1AN08U86C503579").validate_and_correct().verify_checksum()
-    assert Vin("2C3CDYBT8EH395611\n").validate_and_correct().verify_checksum()
-
+	vin = Vin("1M8GDM9AXKP042788")
+	assert vin.verify_checksum()
+	vin = Vin("1M8GDM9AxKP042788")
+	assert vin.verify_checksum()
+	vin = Vin("\t1M8GDM9AXKP042788\t")
+	assert vin.verify_checksum()
+	vin = Vin(" 1M8GDM9AYKP042788")
+	assert not vin.verify_checksum()
+	vin = Vin("1M8GdM9AXKP042788")
+	assert vin.verify_checksum()
+	vin = Vin(" 5N1AN08U86C503579")
+	assert vin.verify_checksum()
+	vin = Vin("2C3CDYBT8EH395611\n")
+	assert vin.verify_checksum()
     # non strict
-    non_strict = Vin("WBA71DC010CH14720").validate_and_correct()
-    assert non_strict.verify_checksum(check_year=False)
-    assert not non_strict.verify_checksum()
+	non_strict = Vin("WBA71DC010CH14720")
+	assert non_strict.verify_checksum(check_year=False)
+	assert not non_strict.verify_checksum()
 
 
 def test_unsupported_brand():
 
-    vin = Vin("200BL8EV9AX604020").validate_and_correct()
+    vin = Vin("200BL8EV9AX604020")
     assert vin.manufacturer == "UnsupportedBrand"
     assert vin.country is None
 
@@ -46,4 +51,4 @@ def test_merge_wmi():
 
 
 def test_squish_vin():
-    assert Vin("KF1SF08WJ8B257338").validate_and_correct().squish_vin == "KF1SF08W8B"
+    assert Vin("KF1SF08WJ8B257338").squish_vin == "KF1SF08W8B"
