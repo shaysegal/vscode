@@ -1,0 +1,7 @@
+'''
+in order to fix the assert issue we would like to pad every string the fails with " " in the suffix
+until length 7.
+also we would like the change the output of `populate_storage` to: 
+return storage_array as before but retrun also the average nunber of " " 
+(number of " " divided to number of total string) 
+'''

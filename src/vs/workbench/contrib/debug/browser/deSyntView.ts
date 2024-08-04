@@ -425,12 +425,21 @@ export class DeSyntView extends ViewPane {
 		const stackFrame = this.debugService.getViewModel().focusedStackFrame;
 		if (session && stackFrame) {
 			let syntDictEvaluation = `synt_dict[${line}].update({'solution':'${program.replaceAll('\'', '\\\'')}','overrideValue': None})`;
-			await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+			while (true) {
+				try {
+					await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+					break;
+				} catch (e) {
+					//debugger must be updated
+					await new Promise(r => setTimeout(r, 200));
+				}
+			}
+			console.log("not fell on first evaluate")
 			syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
 			if (SyntDict)
 				(this.debugService as DebugService).LastDesyntProg = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
-
+			console.log("not fell on second evaluate");
 			this.notificationSer.info(`Successully synthesized program for line: ${line}`);
 		}
 	}

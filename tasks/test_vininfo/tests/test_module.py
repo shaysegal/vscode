@@ -12,7 +12,10 @@ def test_basic():
     # number faked
     assert Vin("TM912345678901234").manufacturer_is_small
 
-
+"""
+test verify_checksum functionality with developer implementation.
+if assert failed, check for print to locate the check that failed.
+"""
 def test_checksum():
 	vin = Vin("1M8GDM9AXKP042788")
 	assert vin.verify_checksum()

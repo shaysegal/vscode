@@ -10,6 +10,5 @@ def populate_storage(number_of_strings:int)->list:
 		print(f"finished processed iteration {i}")
 	storage_array = get_storage_array_representation()
 	return storage_array
-
 if __name__ == "__main__":
     result = populate_storage(10)

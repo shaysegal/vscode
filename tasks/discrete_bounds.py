@@ -9,9 +9,16 @@ np.random.seed(4)
 #alias
 Circle_XY_Positions = list[int]
 
-
-
-def ensure_inbounds(future_positions: list[Circle_XY_Positions], ball_radius: int, bounds: Tuple[int,int])->list[List[Circle_XY_Positions]]:
+'''
+return new positions list where for each x,y positions it return x,y if the position with ball radius 
+isn't out of bound or corrected x,y if it is. 
+for example for [[0,1],[7,10],[1,2]] we want to retrun [[1,1],[7,9],[1,2]]   
+BALL_RADIUS is the radius of *all* the balls 
+BOUNDS is the tuple of upper an lower bounds of *both axis*
+'''
+def ensure_inbounds(future_positions: list[Circle_XY_Positions])->List[Circle_XY_Positions]:
+    BALL_RADIUS = 1
+    BOUNDS = (0,10)
     raise NotImplementedError
     return ret
 
@@ -45,7 +52,7 @@ class Model:
         steps = np.random.randint(-1, 2, size=(self.num_circles, 2))
         new_agent_positions = self.agents + steps
         #self.agents = new_agent_positions
-        self.agents = ensure_inbounds(new_agent_positions.tolist(), int(self.diameter/2), self.bounds)
+        self.agents = ensure_inbounds(new_agent_positions.tolist())
 
     def draw(self) -> None:
         for a, c in zip(self.agents, self.circles):
@@ -59,5 +66,5 @@ class Model:
             self.move()
             self.draw()
 
-model = Model(3, 2, [0, 10])
+model = Model(3, 2 , [0,10])
 model.run()

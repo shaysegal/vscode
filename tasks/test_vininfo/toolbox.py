@@ -47,7 +47,7 @@ class Vin(Annotatable):
 
         """
         unvalidated_num = self.num
-        #TODO: add the correction part...
+        #TODO: implement the correction part ...
         validated_num = unvalidated_num
         self.num = validated_num
         return self
@@ -62,16 +62,9 @@ class Vin(Annotatable):
             Note that not all manufacturer abey the rule. Default: True.
 
         """
-        num_len = len(self.num)
-        if num_len != 17:
-            print(f"ValidationError: VIN number requires 17 chars ({num_len} given)")
-            return False
 
-        if check_year and self.vis[0] in {"U", "Z", "0"}:
-            print(f"ValidationError: check year failed")
-            return False
 		# validate vin number and correct it "inplace" if needed
-		# not part of immutable.
+		# developer implementation, not part of immutable.
         self.validate_and_correct()
         trans = {
 			"A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6,
@@ -95,8 +88,19 @@ class Vin(Annotatable):
 
         check_digit = "X" if checksum == 10 else checksum
 
-        return str(check_digit) == self.vds[5]
+        if str(check_digit) != self.vds[5]:
+            print(f" ValidationError: failed checksum test")
+            return False
+        
+        num_len = len(self.num)
+        if num_len != 17:
+            print(f"ValidationError: VIN number requires 17 chars ({num_len} given)")
+            return False
 
+        if check_year and self.vis[0] in {"U", "Z", "0"}:
+            print(f"ValidationError: check year failed")
+            return False
+        return True 
     @property
     def wmi(self) -> str:
         """WMI (World Manufacturers Identification)"""
