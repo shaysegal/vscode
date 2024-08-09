@@ -304,7 +304,7 @@ export class DebugSession implements IDebugSession {
 			// if there was already a connection make sure to remove old listeners
 			await this.shutdown();
 		}
-
+		this.debugService.candidateExist.set(false);
 		try {
 			const debugAdapter = await dbgr.createDebugAdapter(this);
 			this.raw = this.instantiationService.createInstance(RawDebugSession, debugAdapter, dbgr, this.id, this.configuration.name);

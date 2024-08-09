@@ -38,7 +38,7 @@
                 "./test_vininfo/run_tests.py"
             ],
             "env": {
-                "PYTHONPATH": ".:./test_vininfo"
+                "PYTHONPATH": "${workspaceFolder}/test_vininfo"
             }
         },
     ]

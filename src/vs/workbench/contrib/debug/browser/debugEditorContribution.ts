@@ -1069,16 +1069,17 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		const session = await this.debugService.getViewModel().focusedSession;
 		const syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
 		if (session) {
-			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
-			if (SyntDict) {
-				try {
+			try {
+				const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+				if (SyntDict) {
 					const SyntDictJson = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
 					return SyntDictJson;
-				} catch {
-					console.log('SyntDict isn\'t a valid json');
-					return undefined;
 				}
+			} catch {
+				console.log('SyntDict isn\'t a valid json');
+				return undefined;
 			}
+
 		}
 		return undefined;
 	}

@@ -697,7 +697,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				return;
 			}
 			// If user continues with same sketch value, we want to capture that in the desynt history view
-			storageService.desyntIteration += 1;
+
 			const debugSession = debugService.getViewModel().focusedSession;
 			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
 			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
@@ -715,12 +715,12 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
 				storageService.store(desiredKey, has_generated_solution ? SyntDictJson[sf.range.startLineNumber]['generated_solution'] : storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
-
+			storageService.desyntIteration += 1;
 			if (doesTrigger) {
 				if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
+					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
 				} else {
-					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
+					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
 				}
 				return;
 			}
@@ -814,7 +814,6 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				return;
 			}
 			// If user continues with same sketch value, we want to capture that in the desynt history view
-			storageService.desyntIteration += 1;
 			const desiredKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + storageService.desyntIteration.toString();
 			const value = storageService.get(desiredKey, StorageScope.APPLICATION);
 			const debugSession = debugService.getViewModel().focusedSession;
@@ -832,12 +831,12 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				const prevKey = (debugService.getViewModel()?.focusedSession?.getId() ?? 'desynt') + (storageService.desyntIteration - 1).toString();
 				storageService.store(desiredKey, has_generated_solution ? SyntDictJson[sf.range.startLineNumber]['generated_solution'] : storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
-
+			storageService.desyntIteration += 1;
 			if (doesTrigger) {
 				if (CONTEXT_DISASSEMBLY_VIEW_FOCUS.getValue(contextKeyService)) {
-					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next('instruction'));
+					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next('instruction'));
 				} else {
-					await getThreadAndRun(accessor, context, (thread: IThread) => thread.next());
+					await getThreadAndRunDesynt(debugService, context, (thread: IThread) => thread.next());
 				}
 				return;
 			}
@@ -1131,9 +1130,8 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 				storageService.store(desiredKey, has_generated_solution ? SyntDictJson[sf.range.startLineNumber]['generated_solution'] : storageService.get(prevKey, StorageScope.APPLICATION), StorageScope.PROFILE, StorageTarget.MACHINE);
 			}
 			storageService.desyntIteration += 1;
-
 			if (doesTrigger) {
-				await getThreadAndRun(accessor, context, thread => thread.continue());
+				await getThreadAndRunDesynt(debugService, context, thread => thread.continue());
 				return;
 			}
 			if (codeEditor && sf) {
