@@ -720,9 +720,13 @@ export class DesyntHistoryView extends ViewPane {
 				const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
 
 				const globalScope = await desyntScope!.find(s => s.name === 'Globals')?.getChildren()!;
-				const safeGlobalScope = globalScope.filter(s => ['int', 'str'].includes(s.type!));
+				const safeGlobalScope = globalScope.filter(s => ['int', 'str', 'tuple'].includes(s.type!));
 				const globals = JSON.stringify(safeGlobalScope.map(l => l.toString()));
-
+				for (const variable of safeGlobalScope) {
+					const variableItem = new DesyntHistoryTreeItem(inputItem, variable.toString());
+					inputItem.create(index.toString(), variableItem);
+					index += 1;
+				}
 				if (session && focusedStackFrame && wrapperFrame) {
 					// This is where the synt_dict is updated with the locals and globals
 					const updateEvaluation = `update_synt_dict(${locals}, ${globals}, ${value}, ${desyntFrame!.range.startLineNumber})`;
