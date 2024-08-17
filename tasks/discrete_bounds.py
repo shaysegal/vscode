@@ -1,30 +1,29 @@
-from typing import List, Tuple
-
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 from matplotlib.patches import Circle
 np.random.seed(4)
+#globals
+BALL_RADIUS = 1
+BOUNDS = (0,10)
 
 #alias
 Circle_XY_Positions = list[int]
 
 '''
-return new positions list where for each x,y positions it return x,y if the position with ball radius 
-isn't out of bound or corrected x,y if it is. 
-for example for [[0,1],[7,10],[1,2]] we want to retrun [[1,1],[7,9],[1,2]]   
-BALL_RADIUS is the radius of *all* the balls 
+return new positions list where for each x,y positions it return x,y if the position with ball radius
+isn't out of bound or corrected x,y if it is.
+for example for [[0,1],[7,10],[1,2]] we want to retrun [[1,1],[7,9],[1,2]]
+BALL_RADIUS is the radius of *all* the balls
 BOUNDS is the tuple of upper an lower bounds of *both axis*
 '''
-def ensure_inbounds(future_positions: list[Circle_XY_Positions])->List[Circle_XY_Positions]:
-    BALL_RADIUS = 1
-    BOUNDS = (0,10)
+def ensure_inbounds(future_poitions: list[list[int]])->list[list[int]]:
     raise NotImplementedError
-    return ret
+    return result
 
 
 class Model:
-    def __init__(self, num_circles: int, diameter: int, bounds: List[int]) -> None:
+    def __init__(self, num_circles: int, diameter: int, bounds: list[int]) -> None:
         self.num_circles = num_circles
         self.diameter = diameter
         self.bounds = bounds
@@ -66,5 +65,5 @@ class Model:
             self.move()
             self.draw()
 
-model = Model(3, 2 , [0,10])
+model = Model(3, 2*BALL_RADIUS , BOUNDS)
 model.run()

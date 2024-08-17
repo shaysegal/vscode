@@ -135,7 +135,7 @@ def ad_hoc_eval_solution(line_number, localState):
             return synt_dict[line_number]["overrideValue"]
         if "solution" in synt_dict[line_number]:
             output = eval(synt_dict[line_number]["solution"], localState)
-            synt_dict[line_number]["generated_solution"] = output
+            synt_dict[line_number]["generated_solution"] = str(output)
             sketchValueContainer.sketchValue = output
             return output
 
@@ -220,7 +220,7 @@ def update_synt_dict(locals_state_json, global_state_json, value, current_line):
             synt_dict[current_line]["output"][idx] = value
             return
 
-        if synt_dict[current_line].get("solution") and value != synt_dict[
+        if synt_dict[current_line].get("solution") and str(value) != synt_dict[
             current_line
         ].get("generated_solution"):
             synt_dict[current_line]["overrideValue"] = value
