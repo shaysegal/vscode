@@ -668,7 +668,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		let onSketch = false;
 
 		// This is horrible but works for now
-		const sf = debugService.getViewModel().focusedStackFrame;
+		const sf = debugService.getViewModel().focusedStackFrame?.thread.getTopStackFrame();
 		if (sf) {
 			if (codeEditor) {
 				const currentLine = sf.range.startLineNumber;
@@ -778,8 +778,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		let onSketch = false; // we do not want to allow step into the sketch and reveal our magic ;)
 
 		// This is horrible but works for now
-		const sf = debugService.getViewModel().focusedStackFrame;
-
+		const sf = debugService.getViewModel().focusedStackFrame?.thread.getTopStackFrame();
 		if (sf) {
 			const currentLine = sf.range.startLineNumber;
 			if (codeEditor) {
@@ -1086,7 +1085,8 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 		const localDesyntView = createLocalDesyntView(accessor);
 		let onSketch = false;
 		// This is horrible but works for now
-		const sf = debugService.getViewModel().focusedStackFrame;
+		//const sf = debugService.getViewModel().focusedStackFrame;
+		const sf = debugService.getViewModel().focusedStackFrame?.thread.getTopStackFrame();
 		if (sf) {
 			if (codeEditor) {
 				const currentLine = sf.range.startLineNumber;

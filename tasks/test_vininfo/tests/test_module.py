@@ -17,6 +17,8 @@ test verify_checksum functionality with developer implementation.
 if assert failed, check for print to locate the check that failed.
 """
 def test_checksum():
+	vin = Vin("2C3CDYBT8EH395611")
+	assert vin.verify_checksum()
 	vin = Vin("1M8GDM9AXKP042788")
 	assert vin.verify_checksum()
 	vin = Vin("1M8GDM9AxKP042788")

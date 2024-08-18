@@ -17,7 +17,7 @@ for example for [[0,1],[7,10],[1,2]] we want to retrun [[1,1],[7,9],[1,2]]
 BALL_RADIUS is the radius of *all* the balls
 BOUNDS is the tuple of upper an lower bounds of *both axis*
 '''
-def ensure_inbounds(future_poitions: list[list[int]])->list[list[int]]:
+def ensure_inbounds(future_poitions: list[Circle_XY_Positions])->list[Circle_XY_Positions]:
     raise NotImplementedError
     return result
 

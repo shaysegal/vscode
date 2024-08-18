@@ -582,7 +582,7 @@ export class DebugService implements IDebugService {
 	 * instantiates the new session, initializes the session, registers session listeners and reports telemetry
 	 */
 	private async doCreateSession(sessionId: string, root: IWorkspaceFolder | undefined, configuration: { resolved: IConfig; unresolved: IConfig | undefined }, options?: IDebugSessionOptions): Promise<boolean> {
-
+		// @ts-ignore comment
 		const session = this.instantiationService.createInstance(DebugSession, sessionId, configuration, root, this.model, options);
 		if (options?.startedByUser && this.model.getSessions().some(s => s.getLabel() === session.getLabel()) && configuration.resolved.suppressMultipleSessionWarning !== true) {
 			// There is already a session with the same name, prompt user #127721

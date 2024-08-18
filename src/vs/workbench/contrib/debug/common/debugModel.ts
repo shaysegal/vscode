@@ -87,8 +87,8 @@ export class ExpressionContainer implements IExpressionContainer {
 	protected adoptLazyResponse(response: DebugProtocol.Variable): void {
 	}
 
-	getChildren(): Promise<IExpression[]> {
-		if (!this.children) {
+	getChildren(invalid = false): Promise<IExpression[]> {
+		if ((!this.children) || invalid) {
 			this.children = this.doGetChildren();
 		}
 

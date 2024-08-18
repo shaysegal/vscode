@@ -49,8 +49,8 @@ import { DebugService } from 'vs/workbench/contrib/debug/browser/debugService';
 import { ExceptionWidget } from 'vs/workbench/contrib/debug/browser/exceptionWidget';
 import { HandleSolutionWidget } from 'vs/workbench/contrib/debug/browser/handleSolutionWidget';
 import { TriggerlessWidget } from 'vs/workbench/contrib/debug/browser/triggerlessWidget';
-import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
-import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
+import { CONTEXT_EXCEPTION_WIDGET_VISIBLE, IDebugConfiguration, IDebugEditorContribution, IDebugService, IDebugSession, IExceptionInfo, IExpression, IExpressionContainer, IScope, IStackFrame, State } from 'vs/workbench/contrib/debug/common/debug';
+import { Expression, ExpressionContainer } from 'vs/workbench/contrib/debug/common/debugModel';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 
 //import { SnippetController2 } from 'vs/editor/contrib/snippet/browser/snippetController2';
@@ -910,7 +910,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			// Get all top level variables in the scope chain
 			const SyntDict = await this.getDesyntInsight(stackFrame);
 			const decorationsPerScope = await Promise.all(scopes.map(async scope => {
-				const variables = await scope.getChildren();
+				const variables = await (((scope as IScope) as IExpressionContainer) as ExpressionContainer).getChildren(true);
 
 				let range = new Range(0, 0, stackFrame.range.startLineNumber, stackFrame.range.startColumn);
 				if (scope.range) {
