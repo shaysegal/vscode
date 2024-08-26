@@ -431,15 +431,24 @@ export class DeSyntView extends ViewPane {
 					break;
 				} catch (e) {
 					//debugger must be updated
+					console.log("fell on first evaluate,retry")
 					await new Promise(r => setTimeout(r, 200));
 				}
 			}
-			console.log("not fell on first evaluate")
 			syntDictEvaluation = '__import__(\'json\').dumps(synt_dict,cls=MyEncoder)';
-			const SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+			let SyntDict = undefined;
+			while (true) {
+				try {
+					SyntDict = await session.evaluate(syntDictEvaluation, stackFrame.frameId);
+					break;
+				} catch (e) {
+					//debugger must be updated
+					console.log("fell on second evaluate,retry")
+					await new Promise(r => setTimeout(r, 200));
+				}
+			}
 			if (SyntDict)
 				(this.debugService as DebugService).LastDesyntProg = JSON.parse(SyntDict.body.result.replaceAll('\'{', '{').replaceAll('}\'', '}').replaceAll('\\\\', '\\').replaceAll('\\\'', '\\\"').replaceAll(/\bNaN\b/g, '"NaN"'));
-			console.log("not fell on second evaluate");
 			this.notificationSer.info(`Successully synthesized program for line: ${line}`);
 		}
 	}
