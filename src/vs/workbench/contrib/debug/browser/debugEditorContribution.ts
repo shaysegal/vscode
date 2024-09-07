@@ -979,8 +979,12 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		}
 		if (!found) { // show deSynt decoration even if there is no decoraion for it
 			const objSyntDict = SyntDict as any;
-			const sketch_line = current_range.startLineNumber;
 			const model = this.editor.getModel();
+			let sketch_line = model?.getLinesContent().findIndex((x) => x.includes("??")) ?? -1;
+			if (sketch_line == -1) {
+				return
+			}
+			sketch_line = sketch_line + 1
 			const lineVal = model!.getLineContent(sketch_line).trimStart();
 
 			if (!lineVal.includes("??")) {
