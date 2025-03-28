@@ -36,7 +36,7 @@ import { ViewPane } from 'vs/workbench/browser/parts/views/viewPane';
 import { IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IViewDescriptorService } from 'vs/workbench/common/views';
 import { renderViewTree } from 'vs/workbench/contrib/debug/browser/baseDebugView';
-import { CONTEXT_DESYNT_HISTORY_ITEM_TYPE, IDebugService, IDebugSession, State, } from 'vs/workbench/contrib/debug/common/debug';
+import { CONTEXT_DESYNT_HISTORY_ITEM_TYPE, IDebugService, IDebugSession, IExpression, State, } from 'vs/workbench/contrib/debug/common/debug';
 import { DebugContentProvider } from 'vs/workbench/contrib/debug/common/debugContentProvider';
 import { Source } from 'vs/workbench/contrib/debug/common/debugSource';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
@@ -48,6 +48,54 @@ const NEW_STYLE_COMPRESS = true;
 const URI_SCHEMA_PATTERN = /^[a-zA-Z][a-zA-Z0-9\+\-\.]+:/;
 
 type DesyntHistoryItem = BaseTreeItem;
+
+export class ExpandedVariable {
+	name: string;
+	value: string;
+	type?: string;
+	children: ExpandedVariable[];
+	constructor(name: string, value: string, type?: string, children?: ExpandedVariable[]) {
+		this.name = name;
+		this.value = value;
+		this.type = type;
+		this.children = children || [];
+	}
+	static async fromDebugVariable(variable: IExpression): Promise<ExpandedVariable> {
+		const expanded = new ExpandedVariable(variable.name, variable.value, variable.type);
+
+		if (variable.hasChildren) {
+			const nested = await variable.getChildren();
+			for (const child of nested.filter(c => !(["special variables", "function variables"].includes(c.name) || c.name.includes(")")))) {
+				expanded.children.push(await ExpandedVariable.fromDebugVariable(child));
+			}
+		}
+
+		return expanded;
+	}
+	getAllPaths(parentPath = ''): string[] {
+		const currentPath = parentPath ? `${parentPath}[${this.name}]` : this.name;
+		const paths = [];
+
+		if (this.children.length === 0) {
+			paths.push(`${currentPath}: ${this.value}`);
+		} else {
+			for (const child of this.children) {
+				paths.push(...child.getAllPaths(currentPath));
+			}
+		}
+
+		return paths;
+	}
+	toJSON(): object {
+		return {
+			name: this.name,
+			value: this.value,
+			type: this.type,
+			children: this.children.map(child => child.toJSON()),
+		};
+	}
+}
+
 
 class BaseTreeItem {
 
@@ -717,7 +765,15 @@ export class DesyntHistoryView extends ViewPane {
 						!['function', 'self'].includes(s.name) &&
 						!['{'].includes(s.value[0])
 				);
-				const locals = JSON.stringify(safeLocalScope.map(l => l.toString()));
+				const extendend = []
+				for (const v of localScope) {
+					if (v.hasChildren) {
+						const expand = await ExpandedVariable.fromDebugVariable(v)
+						extendend.push(expand)
+					}
+				}
+				const f = extendend.map(e => e.getAllPaths()).flat()
+				const locals = JSON.stringify(f.concat(safeLocalScope.map(l => l.toString())));
 
 				const globalScope = await desyntScope!.find(s => s.name === 'Globals')?.getChildren()!;
 				const safeGlobalScope = globalScope.filter(s => ['int', 'str', 'tuple'].includes(s.type!));
