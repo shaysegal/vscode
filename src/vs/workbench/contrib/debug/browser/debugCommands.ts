@@ -1050,7 +1050,7 @@ async function triggerlessSynthesize(session: IDebugSession, stackFrame: IStackF
 		if (!SyntDictJson[lineNumber]) {
 			return;
 		}
-		if (SyntDictJson[lineNumber]['solution'] && !SyntDictJson[lineNumber]['overrideValue']) {
+		if (SyntDictJson[lineNumber]['solution'] && !(SyntDictJson[lineNumber]['overrideValue'] !== undefined)) {
 			return;
 		}
 		if ((new Set(Object.entries(SyntDictJson[lineNumber]['input']).map(key_val_tuple => JSON.stringify(key_val_tuple[1])))).size < minimumUniqueExamples4Triggerless) {
