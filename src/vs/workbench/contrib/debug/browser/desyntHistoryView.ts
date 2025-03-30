@@ -726,6 +726,16 @@ export class DesyntHistoryView extends ViewPane {
 		// populate tree model with source paths from all debug sessions
 		this.debugService.getModel().getSessions().forEach(session => addSourcePathsToSession(session));
 	}
+	createDesyntHistoryTree(parentIndex: number, parentItem: DesyntHistoryTreeItem, extendendVariable: ExpandedVariable) {
+		const label = extendendVariable.children.length > 0 ? extendendVariable.name : `${extendendVariable.name}:${extendendVariable.value}`
+		const variableItem = new DesyntHistoryTreeItem(parentItem, label);
+		parentItem.create(parentIndex.toString(), variableItem);
+		let index = 0
+		for (const child of extendendVariable.children) {
+			this.createDesyntHistoryTree(index, variableItem, child)
+			index += 1
+		}
+	}
 	async addChangeToDesyntView(root: RootTreeItem, value: string) {
 		const key = this.keyIteration.toString() + ',' + '0';
 		let currentParentItem: DesyntHistoryTreeItem;
@@ -747,11 +757,7 @@ export class DesyntHistoryView extends ViewPane {
 				const inputItem = new DesyntHistoryTreeItem(parentItem, 'input variables');
 				parentItem.create(inputKey, inputItem);
 				let index = 0;
-				for (const variable of localscope) {
-					const variableItem = new DesyntHistoryTreeItem(inputItem, variable.toString());
-					inputItem.create(index.toString(), variableItem);
-					index += 1;
-				}
+
 
 				const session = this.debugService.getViewModel().focusedSession;
 				const thread = this.debugService.getViewModel().focusedThread;
@@ -765,6 +771,11 @@ export class DesyntHistoryView extends ViewPane {
 						!['function', 'self'].includes(s.name) &&
 						!['{'].includes(s.value[0])
 				);
+				for (const variable of safeLocalScope) {
+					const variableItem = new DesyntHistoryTreeItem(inputItem, variable.toString());
+					inputItem.create(index.toString(), variableItem);
+					index += 1;
+				}
 				const extendend = []
 				for (const v of localScope) {
 					if (v.hasChildren) {
@@ -773,6 +784,10 @@ export class DesyntHistoryView extends ViewPane {
 					}
 				}
 				const f = extendend.map(e => e.getAllPaths()).flat()
+				for (const variable of extendend) {
+					this.createDesyntHistoryTree(index, parentItem, variable)
+					index += 1;
+				}
 				const locals = JSON.stringify(f.concat(safeLocalScope.map(l => l.toString())));
 
 				const globalScope = await desyntScope!.find(s => s.name === 'Globals')?.getChildren()!;
