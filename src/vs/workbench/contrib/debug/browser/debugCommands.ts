@@ -590,6 +590,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KeyD, KeyMod.CtrlCmd | KeyCode.KeyA),
 	when: CONTEXT_IN_DEBUG_MODE,
 	handler: async (accessor, _, context) => {
+		const commandService = accessor.get(ICommandService)
 		const debugService = accessor.get(IDebugService);
 		const codeEditorService = accessor.get(ICodeEditorService);
 		const editorService = accessor.get(IEditorService);
@@ -627,7 +628,7 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 						codeEditorModel.applyEdits([
 							new ValidAnnotatedEditOperation(null, range, program, false, false, false)
 						]);
-
+						commandService.executeCommand('saveAll');
 						const control = editorService.activeTextEditorControl;
 						if (isCodeEditor(control)) { // remove breakpoint after accept
 							const model = control.getModel();
